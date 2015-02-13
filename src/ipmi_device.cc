@@ -435,6 +435,11 @@ bool Device::readAiSensor(aiRecord* _pai) {
 } // Device::readAiSensor
 
 
+bool Device::sensor_id_t::operator ==(const sensor_id_t& _other) const {
+  return (ipmb == _other.ipmb) && (sensor == _other.sensor);
+} // Device::sensor_id_t::operator ==
+
+
 bool Device::sensor_id_t::operator <(const sensor_id_t& _other) const {
   if (ipmb < _other.ipmb) return true;
   else if (ipmb == _other.ipmb) return sensor < _other.sensor;

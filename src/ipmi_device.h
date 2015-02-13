@@ -53,6 +53,7 @@ class Device {
       slave_addr_t ipmb;
       uint8_t sensor;
 
+      bool operator ==(const sensor_id_t& _other) const;
       bool operator <(const sensor_id_t& _other) const;
 
       bool (Device::*query_func)(const sensor_id_t&, result_t&);
