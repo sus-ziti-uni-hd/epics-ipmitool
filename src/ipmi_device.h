@@ -54,6 +54,9 @@ class Device {
       uint8_t sensor;
 
       bool operator <(const sensor_id_t& _other) const;
+
+      bool (Device::*query_func)(const sensor_id_t&, result_t&);
+
     };
 
     void handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec);

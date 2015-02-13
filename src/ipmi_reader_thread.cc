@@ -22,7 +22,7 @@ ReaderThread::~ReaderThread() {
 
 void ReaderThread::do_query(const Device::sensor_id_t& _sensor) {
   Device::result_t result;
-  if (device_->aiQuery(_sensor, result)) {
+  if((device_->*_sensor.query_func)(_sensor, result)) {
     ::pthread_mutex_lock(&results_mutex_);
     results_[_sensor] = result;
     ::pthread_mutex_unlock(&results_mutex_);
