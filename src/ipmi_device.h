@@ -38,6 +38,7 @@ class Device {
   private:
     friend class ReaderThread;
 
+    struct sensor_id_t;
     typedef uint8_t slave_addr_t;
 
     struct result_t {
@@ -48,6 +49,8 @@ class Device {
       } value;
       bool valid;
     }; // struct result_t
+
+    typedef bool (Device::*query_func_t)(const sensor_id_t&, result_t&);
 
     struct sensor_id_t {
       slave_addr_t ipmb;
@@ -66,7 +69,7 @@ class Device {
     static void aiCallback(::CALLBACK* _cb);
     bool aiQuery(const sensor_id_t& _sensor, result_t& _result);
 
-    static sensor_id_t make_sensor_id(const ::aiRecord* _rec);
+    static sensor_id_t make_sensor_id(const ::aiRecord* _rec, query_func_t _f);
 
     bool check_PICMG();
     void find_ipmb();

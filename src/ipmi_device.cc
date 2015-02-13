@@ -49,7 +49,8 @@ void Device::aiCallback(::CALLBACK* _cb) {
   callbackGetUser(vpriv, _cb);
   callback_private_t* priv = static_cast<callback_private_t*>(vpriv);
 
-  result_t result = priv->thread->findResult(make_sensor_id(priv->rec));
+  result_t result = priv->thread->findResult(make_sensor_id(priv->rec,
+          &Device::aiQuery));
   if (result.valid == false) {
     dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
     // update the record
@@ -250,8 +251,7 @@ void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor
 
 
 void Device::initAiRecord(aiRecord* _pai) {
-  sensor_id_t id = make_sensor_id(_pai);
-  id.query_func = &Device::aiQuery;
+  sensor_id_t id = make_sensor_id(_pai, &Device::aiQuery);
   sensor_list_t::const_iterator i = sensors_.find(id);
   if (i == sensors_.end()) {
     SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +id.ipmb << "/0x" << +id.sensor << " not found.");
@@ -396,10 +396,12 @@ void Device::iterateSDRs(slave_addr_t _addr, bool _force_internal) {
   SuS_LOG_STREAM(finer, log_id(), "found " << found << " sensors @0x" << std::hex << +_addr << ".");
 } // Device::iterateSDRs
 
-Device::sensor_id_t Device::make_sensor_id(const ::aiRecord* _rec) {
+Device::sensor_id_t Device::make_sensor_id(const ::aiRecord* _rec,
+        query_func_t _f) {
   sensor_id_t ret;
   ret.ipmb = _rec->inp.value.abio.adapter;
   ret.sensor = _rec->inp.value.abio.card;
+  ret.query_func = _f;
   return ret;
 } // Device::make_sensor_id
 
@@ -423,7 +425,7 @@ bool Device::readAiSensor(aiRecord* _pai) {
   } // if
   if (!_pai->pact) {
     _pai->pact = TRUE;
-    readerThread_->enqueueSensorRead(make_sensor_id(_pai));
+    readerThread_->enqueueSensorRead(make_sensor_id(_pai, &Device::aiQuery));
     dpvt_t* priv = static_cast<dpvt_t*>(_pai->dpvt);
     ::callbackRequestDelayed(&priv->cb, 1.0);
     return true;
