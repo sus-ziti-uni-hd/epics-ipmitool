@@ -40,11 +40,14 @@ class Device {
 
     typedef uint8_t slave_addr_t;
 
-    struct ai_result_t {
+    struct result_t {
       epicsInt32 rval;
-      epicsFloat64 val;
+      union {
+        epicsInt32 ival;
+        epicsFloat64 fval;
+      } value;
       bool valid;
-    }; // struct ai_result_t
+    }; // struct result_t
 
     struct sensor_id_t {
       slave_addr_t ipmb;
@@ -57,7 +60,7 @@ class Device {
     void handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor* _rec);
 
     static void aiCallback(::CALLBACK* _cb);
-    bool aiQuery(const sensor_id_t& _sensor, ai_result_t& _result);
+    bool aiQuery(const sensor_id_t& _sensor, result_t& _result);
 
     static sensor_id_t make_sensor_id(const ::aiRecord* _rec);
 

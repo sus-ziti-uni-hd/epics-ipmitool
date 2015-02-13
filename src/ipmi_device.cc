@@ -49,7 +49,7 @@ void Device::aiCallback(::CALLBACK* _cb) {
   callbackGetUser(vpriv, _cb);
   callback_private_t* priv = static_cast<callback_private_t*>(vpriv);
 
-  ai_result_t result = priv->thread->findResult(make_sensor_id(priv->rec));
+  result_t result = priv->thread->findResult(make_sensor_id(priv->rec));
   if (result.valid == false) {
     dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
     // update the record
@@ -62,7 +62,7 @@ void Device::aiCallback(::CALLBACK* _cb) {
 
   dbScanLock((dbCommon*)priv->rec);
   // update the record
-  priv->rec->val = result.val;
+  priv->rec->val = result.value.fval;
   priv->rec->rval = result.rval;
   priv->rec->udf = 0;
   typedef long(*real_signature)(dbCommon*);
@@ -71,7 +71,7 @@ void Device::aiCallback(::CALLBACK* _cb) {
 } // Device::aiCallback
 
 
-bool Device::aiQuery(const sensor_id_t& _sensor, ai_result_t& _result) {
+bool Device::aiQuery(const sensor_id_t& _sensor, result_t& _result) {
   sensor_list_t::const_iterator i = sensors_.find(_sensor);
   if (i == sensors_.end()) {
     SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +_sensor.ipmb << "/0x" << +_sensor.sensor << " not found.");
@@ -90,7 +90,7 @@ bool Device::aiQuery(const sensor_id_t& _sensor, ai_result_t& _result) {
     return false;
   } // if
 
-  _result.val = sr->s_a_val;
+  _result.value.fval = sr->s_a_val;
   _result.rval = sr->s_reading;
   mutex_.unlock();
   _result.valid = true;
