@@ -81,7 +81,8 @@ bool Device::aiQuery(const sensor_id_t& _sensor, result_t& _result) {
 
   mutex_.lock();
   intf_->target_addr = _sensor.ipmb;
-  ::sensor_reading* sr = ipmi_sdr_read_sensor_value(intf_,
+  // returns a pointer to an internal variable
+  const ::sensor_reading* const sr = ::ipmi_sdr_read_sensor_value(intf_,
                          i->second.common,
                          i->second.type, 2 /* precision */);
   if (!sr->s_reading_valid || !sr->s_has_analog_value) {
@@ -101,7 +102,7 @@ bool Device::aiQuery(const sensor_id_t& _sensor, result_t& _result) {
 
 bool Device::check_PICMG() {
   // from ipmitool, ipmi_main.c
-  ipmi_rq req;
+  ::ipmi_rq req;
   bool version_accepted = false;
 
   memset(&req, 0, sizeof(req));
@@ -113,7 +114,7 @@ bool Device::check_PICMG() {
   msg_data = 0;
 
   intf_->target_addr = local_addr_;
-  struct ipmi_rs* rsp = intf_->sendrecv(intf_, &req);
+  const ::ipmi_rs* const rsp = intf_->sendrecv(intf_, &req);
   if (rsp && !rsp->ccode) {
     if ((rsp->data[0] == 0) &&
         ((rsp->data[1] & 0x0F) == PICMG_ATCA_MAJOR_VERSION)) {
@@ -195,7 +196,7 @@ void Device::find_ipmb() {
   if (!check_PICMG()) return;
 
   // from ipmitool
-  struct ipmi_rq req;
+  ::ipmi_rq req;
   uint8_t msg_data[5];
 
   memset(&req, 0, sizeof(req));
@@ -206,7 +207,7 @@ void Device::find_ipmb() {
   msg_data[0] = 0;   /* picmg identifier */
   msg_data[1] = 0;   /* default fru id */
 
-  ipmi_rs* rsp = intf_->sendrecv(intf_, &req);
+  const ::ipmi_rs* const rsp = intf_->sendrecv(intf_, &req);
   if (!rsp) return;
   else if (rsp->ccode) return;
 
@@ -395,6 +396,7 @@ void Device::iterateSDRs(slave_addr_t _addr, bool _force_internal) {
 
   SuS_LOG_STREAM(finer, log_id(), "found " << found << " sensors @0x" << std::hex << +_addr << ".");
 } // Device::iterateSDRs
+
 
 Device::sensor_id_t Device::make_sensor_id(const ::aiRecord* _rec,
         query_func_t _f) {
