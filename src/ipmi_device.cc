@@ -70,21 +70,11 @@ void Device::aiCallback(::CALLBACK* _cb) {
   dbScanUnlock((dbCommon*)priv->rec);
 } // Device::aiCallback
 
-
 bool Device::aiQuery(const sensor_id_t& _sensor, result_t& _result) {
-  sensor_list_t::const_iterator i = sensors_.find(_sensor);
-  if (i == sensors_.end()) {
-    SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +_sensor.ipmb << "/0x" << +_sensor.sensor << " not found.");
-    return false;
-  }
-
   mutex_.lock();
-  intf_->target_addr = _sensor.ipmb;
-  // returns a pointer to an internal variable
-  const ::sensor_reading* const sr = ::ipmi_sdr_read_sensor_value(intf_,
-                         i->second.common,
-                         i->second.type, 2 /* precision */);
-  if (!sr->s_reading_valid || !sr->s_has_analog_value) {
+
+  const ::sensor_reading* const sr = ipmiQuery(_sensor);
+  if (!sr || !sr->s_reading_valid || !sr->s_has_analog_value) {
     mutex_.unlock();
     _result.valid = false;
     SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +_sensor.ipmb << "/0x" << +_sensor.sensor << ": Read invalid.");
@@ -97,6 +87,22 @@ bool Device::aiQuery(const sensor_id_t& _sensor, result_t& _result) {
   _result.valid = true;
   return true;
 } // Device::aiQuery
+
+
+const ::sensor_reading* Device::ipmiQuery(const sensor_id_t& _sensor) {
+  sensor_list_t::const_iterator i = sensors_.find(_sensor);
+  if (i == sensors_.end()) {
+    SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +_sensor.ipmb << "/0x" << +_sensor.sensor << " not found.");
+    return nullptr;
+  }
+
+  intf_->target_addr = _sensor.ipmb;
+  // returns a pointer to an internal variable
+  const ::sensor_reading* const sr = ::ipmi_sdr_read_sensor_value(intf_,
+                         i->second.common,
+                         i->second.type, 2 /* precision */);
+  return sr;
+}
 
 
 bool Device::check_PICMG() {

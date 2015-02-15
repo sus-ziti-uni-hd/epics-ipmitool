@@ -78,6 +78,8 @@ class Device {
     static void aiCallback(::CALLBACK* _cb);
     bool aiQuery(const sensor_id_t& _sensor, result_t& _result);
 
+    const ::sensor_reading* ipmiQuery(const sensor_id_t& _sensor);
+
     bool check_PICMG();
     void find_ipmb();
     void iterateSDRs(slave_addr_t _addr, bool _force_internal=false);
