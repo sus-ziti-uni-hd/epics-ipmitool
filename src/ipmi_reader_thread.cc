@@ -32,7 +32,7 @@ void ReaderThread::do_query(const Device::query_job_t& _sensor) {
 
 void ReaderThread::enqueueSensorRead(const Device::query_job_t& _sensor) {
   ::pthread_mutex_lock(&mutex_);
-  queries_.push_back(_sensor);
+  queries_.emplace_back(_sensor);
   ::pthread_cond_signal(&cond_);
   ::pthread_mutex_unlock(&mutex_);
 } // ReaderThread::enqueue
