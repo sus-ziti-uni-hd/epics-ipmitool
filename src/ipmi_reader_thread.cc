@@ -20,17 +20,17 @@ ReaderThread::~ReaderThread() {
 } // ReaderThread destructor
 
 
-void ReaderThread::do_query(const Device::sensor_id_t& _sensor) {
+void ReaderThread::do_query(const Device::query_job_t& _sensor) {
   Device::result_t result;
-  if((device_->*_sensor.query_func)(_sensor, result)) {
+  if((device_->*_sensor.query_func)(_sensor.sensor, result)) {
     ::pthread_mutex_lock(&results_mutex_);
-    results_[_sensor] = result;
+    results_[_sensor.sensor] = result;
     ::pthread_mutex_unlock(&results_mutex_);
   } // if
 } // ReaderThread::do_query
 
 
-void ReaderThread::enqueueSensorRead(const Device::sensor_id_t& _sensor) {
+void ReaderThread::enqueueSensorRead(const Device::query_job_t& _sensor) {
   ::pthread_mutex_lock(&mutex_);
   queries_.push_back(_sensor);
   ::pthread_cond_signal(&cond_);

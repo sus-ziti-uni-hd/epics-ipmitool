@@ -54,24 +54,29 @@ class Device {
     typedef bool (Device::*query_func_t)(const sensor_id_t&, result_t&);
 
     struct sensor_id_t {
-
+      sensor_id_t(slave_addr_t _ipmb, uint8_t _sensor);
+      explicit sensor_id_t(const ::link& _loc);
+      
       slave_addr_t ipmb;
       uint8_t sensor;
 
-      bool operator ==(const sensor_id_t& _other) const;
       bool operator <(const sensor_id_t& _other) const;
-
-      bool (Device::*query_func)(const sensor_id_t&, result_t&);
-
     };
 
+    // description of a job queued for reading.
+    // sensor id and function to call for it.
+    struct query_job_t {
+      sensor_id_t sensor;
+      query_func_t query_func;
+
+      query_job_t(const ::link& _loc, query_func_t _f);
+    };
+    
     void handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec);
     void handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor* _rec);
 
     static void aiCallback(::CALLBACK* _cb);
     bool aiQuery(const sensor_id_t& _sensor, result_t& _result);
-
-    static sensor_id_t make_sensor_id(const ::link& _loc, query_func_t _f);
 
     bool check_PICMG();
     void find_ipmb();

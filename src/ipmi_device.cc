@@ -49,8 +49,7 @@ void Device::aiCallback(::CALLBACK* _cb) {
   callbackGetUser(vpriv, _cb);
   callback_private_t* priv = static_cast<callback_private_t*>(vpriv);
 
-  result_t result = priv->thread->findResult(make_sensor_id(priv->rec->inp,
-          &Device::aiQuery));
+  result_t result = priv->thread->findResult(sensor_id_t(priv->rec->inp));
   if (result.valid == false) {
     dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
     // update the record
@@ -216,9 +215,7 @@ void Device::find_ipmb() {
 
 
 void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec) {
-  sensor_id_t id;
-  id.ipmb = _addr;
-  id.sensor = _rec->cmn.keys.sensor_num;
+  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num);
   any_sensor_ptr any;
   any.type = SDR_RECORD_TYPE_FULL_SENSOR;
   any.full = _rec;
@@ -234,13 +231,11 @@ void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec
 
 
 void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor* _rec) {
-  sensor_id_t id;
-  id.ipmb = _addr;
-  id.sensor = _rec->cmn.keys.sensor_num;
+  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num);
   any_sensor_ptr any;
   any.type = SDR_RECORD_TYPE_COMPACT_SENSOR;
   any.compact = _rec;
-  sensors_.insert(std::make_pair(id, any));
+  sensors_.emplace(id, any);
   std::stringstream ss;
   ss << "  found compact 0x" << std::hex << +_addr << "/0x" << +_rec->cmn.keys.sensor_num << std::dec << " : " << _rec->id_string
       << " (0x" << std::hex << std::setw(2) << std::setfill('0') << +_rec->cmn.sensor.type;
@@ -252,7 +247,7 @@ void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor
 
 
 void Device::initAiRecord(aiRecord* _pai) {
-  sensor_id_t id = make_sensor_id(_pai->inp, &Device::aiQuery);
+  sensor_id_t id(_pai->inp);
   sensor_list_t::const_iterator i = sensors_.find(id);
   if (i == sensors_.end()) {
     SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +id.ipmb << "/0x" << +id.sensor << " not found.");
@@ -398,16 +393,6 @@ void Device::iterateSDRs(slave_addr_t _addr, bool _force_internal) {
 } // Device::iterateSDRs
 
 
-Device::sensor_id_t Device::make_sensor_id(const ::link& _loc,
-        query_func_t _f) {
-  sensor_id_t ret;
-  ret.ipmb = _loc.value.abio.adapter;
-  ret.sensor = _loc.value.abio.card;
-  ret.query_func = _f;
-  return ret;
-} // Device::make_sensor_id
-
-
 bool Device::ping() {
   mutex_.lock();
   bool ret = intf_->keepalive(intf_) == 0;
@@ -427,7 +412,7 @@ bool Device::readAiSensor(aiRecord* _pai) {
   } // if
   if (!_pai->pact) {
     _pai->pact = TRUE;
-    readerThread_->enqueueSensorRead(make_sensor_id(_pai->inp, &Device::aiQuery));
+    readerThread_->enqueueSensorRead(query_job_t(_pai->inp, &Device::aiQuery));
     dpvt_t* priv = static_cast<dpvt_t*>(_pai->dpvt);
     ::callbackRequestDelayed(&priv->cb, 1.0);
     return true;
@@ -439,9 +424,16 @@ bool Device::readAiSensor(aiRecord* _pai) {
 } // Device::readAiSensor
 
 
-bool Device::sensor_id_t::operator ==(const sensor_id_t& _other) const {
-  return (ipmb == _other.ipmb) && (sensor == _other.sensor);
-} // Device::sensor_id_t::operator ==
+Device::sensor_id_t::sensor_id_t(slave_addr_t _ipmb, uint8_t _sensor)
+  : ipmb(_ipmb), sensor(_sensor)
+{
+} // Device::sensor_id_t constructor
+
+
+Device::sensor_id_t::sensor_id_t(const ::link& _loc)
+  : ipmb(_loc.value.abio.adapter), sensor(_loc.value.abio.card)
+{
+} // Device::sensor_id_t constructor
 
 
 bool Device::sensor_id_t::operator <(const sensor_id_t& _other) const {
@@ -449,6 +441,12 @@ bool Device::sensor_id_t::operator <(const sensor_id_t& _other) const {
   else if (ipmb == _other.ipmb) return sensor < _other.sensor;
   else return false;
 } // Device::sensor_id_t::operator <
+
+
+Device::query_job_t::query_job_t(const ::link& _loc, query_func_t _f)
+  : sensor(_loc), query_func(_f)
+{
+} // Device::query_job_t constructor
 
 } // namespace IPMIIOC
 

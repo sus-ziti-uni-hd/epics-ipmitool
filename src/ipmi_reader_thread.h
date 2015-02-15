@@ -14,7 +14,7 @@ class ReaderThread {
     ReaderThread(Device* _d);
     ~ReaderThread();
 
-    void enqueueSensorRead(const Device::sensor_id_t& _sensor);
+    void enqueueSensorRead(const Device::query_job_t& _sensor);
     Device::result_t findResult(const Device::sensor_id_t& _sensor);
 
     void start();
@@ -24,7 +24,7 @@ class ReaderThread {
     bool terminate();
 
   private:
-    typedef std::list<Device::sensor_id_t> query_queue_t;
+    typedef std::list<Device::query_job_t> query_queue_t;
     query_queue_t queries_;
 
     typedef std::map<Device::sensor_id_t, Device::result_t> sensor_reading_map_t;
@@ -34,7 +34,7 @@ class ReaderThread {
     static void* run(void* _instance);
 
     void* do_run();
-    void do_query(const Device::sensor_id_t& _sensor);
+    void do_query(const Device::query_job_t& _sensor);
 
     ::pthread_t thread_id_;
 
