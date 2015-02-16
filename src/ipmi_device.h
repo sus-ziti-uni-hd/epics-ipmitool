@@ -15,6 +15,7 @@ extern "C" {
 #include <string>
 #include <set>
 
+struct dbCommon;
 struct aiRecord;
 struct link;
 
@@ -71,6 +72,16 @@ class Device {
 
       query_job_t(const ::link& _loc, query_func_t _f);
     };
+
+    struct callback_private_t {
+      ::dbCommon* rec;
+      sensor_id_t sensor;
+      ReaderThread* thread;
+
+      callback_private_t( ::dbCommon* _rec, const sensor_id_t& _sensor,
+        ReaderThread* _thread);
+    }; // struct callback_private_t
+
     
     void handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec);
     void handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor* _rec);

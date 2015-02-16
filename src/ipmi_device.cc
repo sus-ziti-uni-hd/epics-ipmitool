@@ -24,11 +24,6 @@ extern "C" {
 
 
 namespace {
-struct callback_private_t {
-  ::aiRecord* rec;
-  IPMIIOC::ReaderThread* thread;
-}; // struct callback_private_t
-
 SuS::logfile::subsystem_registrator log_id("IPMIDev");
 } // namespace
 
@@ -49,26 +44,28 @@ void Device::aiCallback(::CALLBACK* _cb) {
   callbackGetUser(vpriv, _cb);
   callback_private_t* priv = static_cast<callback_private_t*>(vpriv);
 
-  result_t result = priv->thread->findResult(sensor_id_t(priv->rec->inp));
+  result_t result = priv->thread->findResult(sensor_id_t(priv->sensor));
   if (result.valid == false) {
     dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
     // update the record
     priv->rec->udf = 1;
     typedef long(*real_signature)(dbCommon*);
-    (*reinterpret_cast<real_signature>(priv->rec->rset->process))(reinterpret_cast<dbCommon*>(priv->rec));
+    (*reinterpret_cast<real_signature>(priv->rec->rset->process))(priv->rec);
     dbScanUnlock(reinterpret_cast<dbCommon*>(priv->rec));
     return;
   } // if
 
   dbScanLock((dbCommon*)priv->rec);
   // update the record
-  priv->rec->val = result.value.fval;
-  priv->rec->rval = result.rval;
   priv->rec->udf = 0;
+  ::aiRecord* const ai = reinterpret_cast< ::aiRecord*>(priv->rec);
+  ai->val = result.value.fval;
+  ai->rval = result.rval;
   typedef long(*real_signature)(dbCommon*);
   (*reinterpret_cast<real_signature>(priv->rec->rset->process))(reinterpret_cast<dbCommon*>(priv->rec));
   dbScanUnlock((dbCommon*)priv->rec);
 } // Device::aiCallback
+
 
 bool Device::aiQuery(const sensor_id_t& _sensor, result_t& _result) {
   mutex_.lock();
@@ -263,9 +260,8 @@ void Device::initAiRecord(aiRecord* _pai) {
   dpvt_t* priv = new dpvt_t;
   callbackSetCallback(aiCallback, &priv->cb);
   callbackSetPriority(priorityLow, &priv->cb);
-  callback_private_t* cb_priv = new callback_private_t;
-  cb_priv->rec = _pai;
-  cb_priv->thread = readerThread_;
+  callback_private_t* cb_priv = new callback_private_t(
+          reinterpret_cast< ::dbCommon*>(_pai), id, readerThread_);
   callbackSetUser(cb_priv, &priv->cb);
   priv->cb.timer = NULL;
   _pai->dpvt = priv;
@@ -453,6 +449,13 @@ Device::query_job_t::query_job_t(const ::link& _loc, query_func_t _f)
   : sensor(_loc), query_func(_f)
 {
 } // Device::query_job_t constructor
+
+
+Device::callback_private_t::callback_private_t( ::dbCommon* _rec,
+        const sensor_id_t& _sensor, ReaderThread* _thread)
+        : rec(_rec), sensor(_sensor), thread(_thread)
+{
+} // Device::callbaack_private_t constructor
 
 } // namespace IPMIIOC
 
