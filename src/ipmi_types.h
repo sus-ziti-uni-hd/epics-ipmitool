@@ -17,7 +17,7 @@ struct result_t {
 
   result_t();
 }; // struct result_t
-  
+
 typedef uint8_t slave_addr_t;
 
 struct sensor_id_t {

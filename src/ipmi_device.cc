@@ -97,8 +97,8 @@ const ::sensor_reading* Device::ipmiQuery(const sensor_id_t& _sensor) {
   intf_->target_addr = _sensor.ipmb;
   // returns a pointer to an internal variable
   const ::sensor_reading* const sr = ::ipmi_sdr_read_sensor_value(intf_,
-                         i->second.common,
-                         i->second.type, 2 /* precision */);
+                                     i->second.common,
+                                     i->second.type, 2 /* precision */);
   return sr;
 }
 
@@ -133,7 +133,7 @@ bool Device::connect(const std::string& _hostname, const std::string& _username,
                      const std::string& _password, int _privlevel) {
   SuS_LOG_STREAM(info, log_id(), "Connecting to '" << _hostname << "'.");
   intf_ = ::ipmi_intf_load(const_cast<char*>("lan"));
-  if(!intf_) {
+  if (!intf_) {
     SuS_LOG(severe, log_id(), "Cannot load lan interface.");
     return false;
   }
@@ -162,8 +162,8 @@ bool Device::connect(const std::string& _hostname, const std::string& _username,
 
 void Device::detectSensors() {
   if (!intf_) {
-      SuS_LOG(fine, log_id(), "Not scanning: not connected.");
-      return;
+    SuS_LOG(fine, log_id(), "Not scanning: not connected.");
+    return;
   }
   //sensors_.clear();
   iterateSDRs(local_addr_);
@@ -175,19 +175,19 @@ void Device::detectSensors() {
   SuS_LOG_STREAM(finer, log_id(), "Total sensor count: " << sensors_.size());
 
   for (sensor_list_t::iterator i = sensors_.begin();
-      i != sensors_.end(); ++i) {
+       i != sensors_.end(); ++i) {
     std::stringstream ss;
     ss << "   @ 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.ipmb
-              << "/0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.sensor;
-    switch(i->second.type) {
-    case SDR_RECORD_TYPE_FULL_SENSOR:
-       ss << " : full '" << i->second.full->id_string << "', event type " << +i->second.common->event_type << std::ends;
-       break;
-    case SDR_RECORD_TYPE_COMPACT_SENSOR:
-       ss << " : compact '" << i->second.compact->id_string << "', event type " << +i->second.common->event_type << std::ends;
-       break;
-    default:
-      ss << " : unexpected type 0x" << std::hex << +i->second.common->sensor.type << std::ends;
+       << "/0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.sensor;
+    switch (i->second.type) {
+      case SDR_RECORD_TYPE_FULL_SENSOR:
+        ss << " : full '" << i->second.full->id_string << "', event type " << +i->second.common->event_type << std::ends;
+        break;
+      case SDR_RECORD_TYPE_COMPACT_SENSOR:
+        ss << " : compact '" << i->second.compact->id_string << "', event type " << +i->second.common->event_type << std::ends;
+        break;
+      default:
+        ss << " : unexpected type 0x" << std::hex << +i->second.common->sensor.type << std::ends;
     }
     SuS_LOG(finer, log_id(), ss.str());
   } // for i
@@ -226,9 +226,9 @@ void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec
   sensors_[ id ] = any;
   std::stringstream ss;
   ss << "  found full 0x" << std::hex << +id.ipmb << "/0x" << +id.sensor << std::dec << " : " << _rec->id_string
-      << " (0x" << std::hex << std::setw(2) << std::setfill('0') << +_rec->cmn.sensor.type;
+     << " (0x" << std::hex << std::setw(2) << std::setfill('0') << +_rec->cmn.sensor.type;
   if (_rec->cmn.sensor.type <= SENSOR_TYPE_MAX)
-      ss << " => " << ::sensor_type_desc[_rec->cmn.sensor.type];
+    ss << " => " << ::sensor_type_desc[_rec->cmn.sensor.type];
   ss << ")." << std::ends;
   SuS_LOG(finest, log_id(), ss.str());
 } // Device::handleFullSensor
@@ -242,9 +242,9 @@ void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor
   sensors_.emplace(id, any);
   std::stringstream ss;
   ss << "  found compact 0x" << std::hex << +_addr << "/0x" << +_rec->cmn.keys.sensor_num << std::dec << " : " << _rec->id_string
-      << " (0x" << std::hex << std::setw(2) << std::setfill('0') << +_rec->cmn.sensor.type;
+     << " (0x" << std::hex << std::setw(2) << std::setfill('0') << +_rec->cmn.sensor.type;
   if (_rec->cmn.sensor.type <= SENSOR_TYPE_MAX)
-      ss << " => " << ::sensor_type_desc[_rec->cmn.sensor.type];
+    ss << " => " << ::sensor_type_desc[_rec->cmn.sensor.type];
   ss << ")." << std::ends;
   SuS_LOG(finest, log_id(), ss.str());
 } // Device::handleCompactSensor
@@ -262,100 +262,100 @@ void Device::initAiRecord(aiRecord* _pai) {
   callbackSetCallback(aiCallback, &priv->cb);
   callbackSetPriority(priorityLow, &priv->cb);
   callback_private_t* cb_priv = new callback_private_t(
-          reinterpret_cast< ::dbCommon*>(_pai), id, readerThread_);
+    reinterpret_cast< ::dbCommon*>(_pai), id, readerThread_);
   callbackSetUser(cb_priv, &priv->cb);
   priv->cb.timer = NULL;
   _pai->dpvt = priv;
 
   if (strlen(_pai->desc) == 0) {
-    switch(i->second.type) {
-    case SDR_RECORD_TYPE_FULL_SENSOR:
-       strncpy(_pai->desc, reinterpret_cast<const char*>(i->second.full->id_string), 40);
-       break;
-    case SDR_RECORD_TYPE_COMPACT_SENSOR:
-       strncpy(_pai->desc, reinterpret_cast<const char*>(i->second.compact->id_string), 40);
-       break;
-    default:
-      std::cerr << "Unexpected type 0x" << std::hex << +i->second.common->sensor.type << std::endl;
+    switch (i->second.type) {
+      case SDR_RECORD_TYPE_FULL_SENSOR:
+        strncpy(_pai->desc, reinterpret_cast<const char*>(i->second.full->id_string), 40);
+        break;
+      case SDR_RECORD_TYPE_COMPACT_SENSOR:
+        strncpy(_pai->desc, reinterpret_cast<const char*>(i->second.compact->id_string), 40);
+        break;
+      default:
+        std::cerr << "Unexpected type 0x" << std::hex << +i->second.common->sensor.type << std::endl;
     }
     _pai->desc[40] = '\0';
   } // if
 
   SuS_LOG_STREAM(finest, log_id(), "SENSOR " << +_pai->inp.value.abio.card);
   SuS_LOG_STREAM(finest, log_id(), "  THRESH "
-            << +i->second.common->mask.type.threshold.read.unr << " "
-            << +i->second.common->mask.type.threshold.read.ucr << " "
-            << +i->second.common->mask.type.threshold.read.unc << " "
-            << +i->second.common->mask.type.threshold.read.lnr << " "
-            << +i->second.common->mask.type.threshold.read.lcr << " "
-            << +i->second.common->mask.type.threshold.read.lnc);
+                 << +i->second.common->mask.type.threshold.read.unr << " "
+                 << +i->second.common->mask.type.threshold.read.ucr << " "
+                 << +i->second.common->mask.type.threshold.read.unc << " "
+                 << +i->second.common->mask.type.threshold.read.lnr << " "
+                 << +i->second.common->mask.type.threshold.read.lcr << " "
+                 << +i->second.common->mask.type.threshold.read.lnc);
   SuS_LOG_STREAM(finest, log_id(), "  HYSTERESIS "
-            << +i->second.common->sensor.capabilities.hysteresis);
-  if(i->second.type == SDR_RECORD_TYPE_FULL_SENSOR) {
+                 << +i->second.common->sensor.capabilities.hysteresis);
+  if (i->second.type == SDR_RECORD_TYPE_FULL_SENSOR) {
     SuS_LOG_STREAM(finest, log_id(), "  LINEAR " << +i->second.full->linearization);
   }
 
   // TODO: for compact sensor
   if (i->second.common->sensor.type == SDR_RECORD_TYPE_FULL_SENSOR) {
-     ::sdr_record_full_sensor* const sdr = i->second.full;
-     // swap for 1/x conversions, cf. section 36.5 of IPMI specification
-     bool swap_hi_lo = (sdr->linearization == SDR_SENSOR_L_1_X);
+    ::sdr_record_full_sensor* const sdr = i->second.full;
+    // swap for 1/x conversions, cf. section 36.5 of IPMI specification
+    bool swap_hi_lo = (sdr->linearization == SDR_SENSOR_L_1_X);
 
-     if (swap_hi_lo) {
-       _pai->lopr = ::sdr_convert_sensor_reading(sdr, sdr->sensor_max);
-       _pai->hopr = ::sdr_convert_sensor_reading(sdr, sdr->sensor_min);
-     } else {
-       _pai->hopr = ::sdr_convert_sensor_reading(sdr, sdr->sensor_max);
-       _pai->lopr = ::sdr_convert_sensor_reading(sdr, sdr->sensor_min);
-     } // else
+    if (swap_hi_lo) {
+      _pai->lopr = ::sdr_convert_sensor_reading(sdr, sdr->sensor_max);
+      _pai->hopr = ::sdr_convert_sensor_reading(sdr, sdr->sensor_min);
+    } else {
+      _pai->hopr = ::sdr_convert_sensor_reading(sdr, sdr->sensor_max);
+      _pai->lopr = ::sdr_convert_sensor_reading(sdr, sdr->sensor_min);
+    } // else
 
-     if (sdr->cmn.mask.type.threshold.read.ucr) {
-       if (swap_hi_lo) {
-         _pai->lolo = ::sdr_convert_sensor_reading(sdr, sdr->threshold.upper.critical);
-         _pai->llsv = ::epicsSevMajor;
-       } else {
-         _pai->hihi = ::sdr_convert_sensor_reading(sdr, sdr->threshold.upper.critical);
-         _pai->hhsv = ::epicsSevMajor;
-       } // else
-     } // if
-     if (sdr->cmn.mask.type.threshold.read.lcr) {
-       if (swap_hi_lo) {
-         _pai->hihi = ::sdr_convert_sensor_reading(sdr, sdr->threshold.lower.critical);
-         _pai->hhsv = ::epicsSevMajor;
-       } else {
-         _pai->lolo = ::sdr_convert_sensor_reading(sdr, sdr->threshold.lower.critical);
-         _pai->llsv = ::epicsSevMajor;
-       } // else
-     } // if
+    if (sdr->cmn.mask.type.threshold.read.ucr) {
+      if (swap_hi_lo) {
+        _pai->lolo = ::sdr_convert_sensor_reading(sdr, sdr->threshold.upper.critical);
+        _pai->llsv = ::epicsSevMajor;
+      } else {
+        _pai->hihi = ::sdr_convert_sensor_reading(sdr, sdr->threshold.upper.critical);
+        _pai->hhsv = ::epicsSevMajor;
+      } // else
+    } // if
+    if (sdr->cmn.mask.type.threshold.read.lcr) {
+      if (swap_hi_lo) {
+        _pai->hihi = ::sdr_convert_sensor_reading(sdr, sdr->threshold.lower.critical);
+        _pai->hhsv = ::epicsSevMajor;
+      } else {
+        _pai->lolo = ::sdr_convert_sensor_reading(sdr, sdr->threshold.lower.critical);
+        _pai->llsv = ::epicsSevMajor;
+      } // else
+    } // if
 
-     if (sdr->cmn.mask.type.threshold.read.unc) {
-       if (swap_hi_lo) {
-         _pai->low = ::sdr_convert_sensor_reading(sdr, sdr->threshold.upper.non_critical);
-         _pai->lsv = ::epicsSevMinor;
-       } else {
-         _pai->high = ::sdr_convert_sensor_reading(sdr, sdr->threshold.upper.non_critical);
-         _pai->hsv = ::epicsSevMinor;
-       } // else
-     } // if
-     if (sdr->cmn.mask.type.threshold.read.lnc) {
-       if (swap_hi_lo) {
-         _pai->high = ::sdr_convert_sensor_reading(sdr, sdr->threshold.lower.non_critical);
-         _pai->hsv = ::epicsSevMinor;
-       } else {
-         _pai->low = ::sdr_convert_sensor_reading(sdr, sdr->threshold.lower.non_critical);
-         _pai->lsv = ::epicsSevMinor;
-       } // else
-     } // if
+    if (sdr->cmn.mask.type.threshold.read.unc) {
+      if (swap_hi_lo) {
+        _pai->low = ::sdr_convert_sensor_reading(sdr, sdr->threshold.upper.non_critical);
+        _pai->lsv = ::epicsSevMinor;
+      } else {
+        _pai->high = ::sdr_convert_sensor_reading(sdr, sdr->threshold.upper.non_critical);
+        _pai->hsv = ::epicsSevMinor;
+      } // else
+    } // if
+    if (sdr->cmn.mask.type.threshold.read.lnc) {
+      if (swap_hi_lo) {
+        _pai->high = ::sdr_convert_sensor_reading(sdr, sdr->threshold.lower.non_critical);
+        _pai->hsv = ::epicsSevMinor;
+      } else {
+        _pai->low = ::sdr_convert_sensor_reading(sdr, sdr->threshold.lower.non_critical);
+        _pai->lsv = ::epicsSevMinor;
+      } // else
+    } // if
 
-     // hysteresis is given in raw values. converting to a fixed value only makes
-     // sense for linear conversions.
-     if (+sdr->linearization == SDR_SENSOR_L_LINEAR) {
-       if ((sdr->cmn.sensor.capabilities.hysteresis == 1)
-           || (sdr->cmn.sensor.capabilities.hysteresis == 2)) {
-         uint8_t hyst = std::min(sdr->threshold.hysteresis.positive, sdr->threshold.hysteresis.negative);
-         _pai->hyst = ::sdr_convert_sensor_reading(sdr, hyst);
-       } // if
-     } // if
+    // hysteresis is given in raw values. converting to a fixed value only makes
+    // sense for linear conversions.
+    if (+sdr->linearization == SDR_SENSOR_L_LINEAR) {
+      if ((sdr->cmn.sensor.capabilities.hysteresis == 1)
+          || (sdr->cmn.sensor.capabilities.hysteresis == 2)) {
+        uint8_t hyst = std::min(sdr->threshold.hysteresis.positive, sdr->threshold.hysteresis.negative);
+        _pai->hyst = ::sdr_convert_sensor_reading(sdr, hyst);
+      } // if
+    } // if
   }
 } // Device::initAiRecord
 
@@ -428,8 +428,7 @@ bool Device::readAiSensor(::aiRecord* _pai) {
 
 
 Device::query_job_t::query_job_t(const ::link& _loc, query_func_t _f)
-  : sensor(_loc), query_func(_f)
-{
+  : sensor(_loc), query_func(_f) {
 } // Device::query_job_t constructor
 
 } // namespace IPMIIOC

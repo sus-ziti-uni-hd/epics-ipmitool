@@ -4,14 +4,14 @@
 namespace IPMIIOC {
 
 class Device;
-  
-class WatchdogThread {
-public:
-  WatchdogThread(Device* _d);
-  virtual ~WatchdogThread();
 
-private:
-  Device* device_;
+class WatchdogThread {
+  public:
+    WatchdogThread(Device* _d);
+    virtual ~WatchdogThread();
+
+  private:
+    Device* device_;
 }; // class WatchdogThread
 
 } // namespace IPMIIOC

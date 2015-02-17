@@ -8,14 +8,12 @@ result_t::result_t() : valid(false) {
 }
 
 sensor_id_t::sensor_id_t(slave_addr_t _ipmb, uint8_t _sensor)
-  : ipmb(_ipmb), sensor(_sensor)
-{
+  : ipmb(_ipmb), sensor(_sensor) {
 } // Device::sensor_id_t constructor
 
 
 sensor_id_t::sensor_id_t(const ::link& _loc)
-  : ipmb(_loc.value.abio.adapter), sensor(_loc.value.abio.card)
-{
+  : ipmb(_loc.value.abio.adapter), sensor(_loc.value.abio.card) {
 } // Device::sensor_id_t constructor
 
 

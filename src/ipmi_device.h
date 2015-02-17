@@ -64,16 +64,16 @@ class Device {
 
     bool check_PICMG();
     void find_ipmb();
-    void iterateSDRs(slave_addr_t _addr, bool _force_internal=false);
+    void iterateSDRs(slave_addr_t _addr, bool _force_internal = false);
 
     ::ipmi_intf* intf_;
 
     typedef struct {
       uint8_t type;
       union {
-         ::sdr_record_common_sensor* common;
-         ::sdr_record_full_sensor* full;
-         ::sdr_record_compact_sensor* compact;
+        ::sdr_record_common_sensor* common;
+        ::sdr_record_full_sensor* full;
+        ::sdr_record_compact_sensor* compact;
       };
     } any_sensor_ptr;
     typedef std::map<sensor_id_t, any_sensor_ptr> sensor_list_t;
