@@ -15,6 +15,8 @@ extern "C" {
 #include <string>
 #include <set>
 
+#include "ipmi_types.h"
+
 struct dbCommon;
 struct aiRecord;
 struct link;
@@ -22,6 +24,7 @@ struct link;
 namespace IPMIIOC {
 
 class ReaderThread;
+struct result_t;
 
 class Device {
   public:
@@ -40,29 +43,7 @@ class Device {
   private:
     friend class ReaderThread;
 
-    struct sensor_id_t;
-    typedef uint8_t slave_addr_t;
-
-    struct result_t {
-      epicsInt32 rval;
-      union {
-        epicsInt32 ival;
-        epicsFloat64 fval;
-      } value;
-      bool valid;
-    }; // struct result_t
-
     typedef bool (Device::*query_func_t)(const sensor_id_t&, result_t&);
-
-    struct sensor_id_t {
-      sensor_id_t(slave_addr_t _ipmb, uint8_t _sensor);
-      explicit sensor_id_t(const ::link& _loc);
-      
-      slave_addr_t ipmb;
-      uint8_t sensor;
-
-      bool operator <(const sensor_id_t& _other) const;
-    };
 
     // description of a job queued for reading.
     // sensor id and function to call for it.
@@ -73,16 +54,6 @@ class Device {
       query_job_t(const ::link& _loc, query_func_t _f);
     };
 
-    struct callback_private_t {
-      ::dbCommon* rec;
-      sensor_id_t sensor;
-      ReaderThread* thread;
-
-      callback_private_t( ::dbCommon* _rec, const sensor_id_t& _sensor,
-        ReaderThread* _thread);
-    }; // struct callback_private_t
-
-    
     void handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec);
     void handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor* _rec);
 

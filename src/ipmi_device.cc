@@ -1,4 +1,5 @@
 #include "ipmi_device.h"
+#include "ipmi_device_private.h"
 #include "ipmi_reader_thread.h"
 #include "ipmi_internal.h"
 
@@ -406,7 +407,7 @@ bool Device::ping() {
 } // Device::ping
 
 
-bool Device::readAiSensor(aiRecord* _pai) {
+bool Device::readAiSensor(::aiRecord* _pai) {
   if (!_pai->dpvt) {
     // when dpvt is not set, init failed
     _pai->udf = 1;
@@ -426,36 +427,10 @@ bool Device::readAiSensor(aiRecord* _pai) {
 } // Device::readAiSensor
 
 
-Device::sensor_id_t::sensor_id_t(slave_addr_t _ipmb, uint8_t _sensor)
-  : ipmb(_ipmb), sensor(_sensor)
-{
-} // Device::sensor_id_t constructor
-
-
-Device::sensor_id_t::sensor_id_t(const ::link& _loc)
-  : ipmb(_loc.value.abio.adapter), sensor(_loc.value.abio.card)
-{
-} // Device::sensor_id_t constructor
-
-
-bool Device::sensor_id_t::operator <(const sensor_id_t& _other) const {
-  if (ipmb < _other.ipmb) return true;
-  else if (ipmb == _other.ipmb) return sensor < _other.sensor;
-  else return false;
-} // Device::sensor_id_t::operator <
-
-
 Device::query_job_t::query_job_t(const ::link& _loc, query_func_t _f)
   : sensor(_loc), query_func(_f)
 {
 } // Device::query_job_t constructor
-
-
-Device::callback_private_t::callback_private_t( ::dbCommon* _rec,
-        const sensor_id_t& _sensor, ReaderThread* _thread)
-        : rec(_rec), sensor(_sensor), thread(_thread)
-{
-} // Device::callbaack_private_t constructor
 
 } // namespace IPMIIOC
 

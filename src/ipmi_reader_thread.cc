@@ -21,7 +21,7 @@ ReaderThread::~ReaderThread() {
 
 
 void ReaderThread::do_query(const Device::query_job_t& _sensor) {
-  Device::result_t result;
+  result_t result;
   if((device_->*_sensor.query_func)(_sensor.sensor, result)) {
     ::pthread_mutex_lock(&results_mutex_);
     results_[_sensor.sensor] = result;
@@ -38,16 +38,14 @@ void ReaderThread::enqueueSensorRead(const Device::query_job_t& _sensor) {
 } // ReaderThread::enqueue
 
 
-Device::result_t ReaderThread::findResult(const Device::sensor_id_t& _sensor) {
+result_t ReaderThread::findResult(const sensor_id_t& _sensor) {
   ::pthread_mutex_lock(&results_mutex_);
   sensor_reading_map_t::iterator i = results_.find(_sensor);
   if (i == results_.end()) {
     ::pthread_mutex_unlock(&results_mutex_);
-    Device::result_t r;
-    r.valid = false;
-    return r;
+    return result_t();
   } // if
-  Device::result_t r = i->second;
+  result_t r = i->second;
   results_.erase(i);
   ::pthread_mutex_unlock(&results_mutex_);
   return r;
