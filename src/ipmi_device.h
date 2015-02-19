@@ -20,6 +20,7 @@ extern "C" {
 struct dbCommon;
 struct aiRecord;
 struct link;
+struct mbbiRecord;
 
 namespace IPMIIOC {
 
@@ -35,6 +36,9 @@ class Device {
 
     void initAiRecord(::aiRecord* _rec);
     bool readAiSensor(::aiRecord* _rec);
+
+    void initMbbiRecord(::mbbiRecord* _rec);
+    bool readMbbiSensor(::mbbiRecord* _rec);
 
     void detectSensors();
 
@@ -60,6 +64,9 @@ class Device {
     static void aiCallback(::CALLBACK* _cb);
     bool aiQuery(const sensor_id_t& _sensor, result_t& _result);
 
+    static void mbbiCallback(::CALLBACK* _cb);
+    bool mbbiQuery(const sensor_id_t& _sensor, result_t& _result);
+
     const ::sensor_reading* ipmiQuery(const sensor_id_t& _sensor);
 
     bool check_PICMG();
@@ -78,6 +85,8 @@ class Device {
     } any_sensor_ptr;
     typedef std::map<sensor_id_t, any_sensor_ptr> sensor_list_t;
     sensor_list_t sensors_;
+
+    any_sensor_ptr initInputRecord(::dbCommon* _rec, const ::link& _inp);
 
     ::epicsMutex mutex_;
     ReaderThread* readerThread_;

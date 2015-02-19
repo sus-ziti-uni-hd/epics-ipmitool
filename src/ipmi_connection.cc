@@ -8,14 +8,15 @@ extern "C" {
 #include <ipmitool/log.h>
 }
 
+#include <dbCommon.h>
 #include <errlog.h>
 
 
 namespace {
 
-IPMIIOC::Device* findDevice(aiRecord* _rec) {
+IPMIIOC::Device* findDevice(const link& _inp) {
   IPMIIOC::intf_map_t::const_iterator it = IPMIIOC::s_interfaces.find(
-        _rec->inp.value.abio.link);
+        _inp.value.abio.link);
   if (it == IPMIIOC::s_interfaces.end()) return NULL;
   else return it->second;
 } // findDevice
@@ -40,15 +41,27 @@ extern "C" {
 
 
   void ipmiInitAiRecord(aiRecord* _rec) {
-    IPMIIOC::Device* d = findDevice(_rec);
+    IPMIIOC::Device* d = findDevice(_rec->inp);
     if (d) d->initAiRecord(_rec);
   } // ipmiInitAiRecord
 
 
   void ipmiReadAiSensor(aiRecord* _rec) {
-    IPMIIOC::Device* d = findDevice(_rec);
+    IPMIIOC::Device* d = findDevice(_rec->inp);
     if (d) d->readAiSensor(_rec);
   } // ipmiReadAiSensor
+
+
+  void ipmiInitMbbiRecord(mbbiRecord* _rec) {
+    IPMIIOC::Device* d = findDevice(_rec->inp);
+    if (d) d->initMbbiRecord(_rec);
+  } // ipmiInitMbbiRecord
+
+
+  void ipmiReadMbbiSensor(mbbiRecord* _rec) {
+    IPMIIOC::Device* d = findDevice(_rec->inp);
+    if (d) d->readMbbiSensor(_rec);
+  } // ipmiReadMbbiSensor
 
 
   void ipmiScanDevice(int _id) {

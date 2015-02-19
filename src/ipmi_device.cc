@@ -11,6 +11,7 @@
 #include <aiRecord.h>
 #include <dbAccess.h>
 #include <errlog.h>
+#include <mbbiRecord.h>
 #include <recSup.h>
 
 #include <logger.h>
@@ -85,6 +86,53 @@ bool Device::aiQuery(const sensor_id_t& _sensor, result_t& _result) {
   _result.valid = true;
   return true;
 } // Device::aiQuery
+
+
+void Device::mbbiCallback(::CALLBACK* _cb) {
+  void* vpriv;
+  callbackGetUser(vpriv, _cb);
+  callback_private_t* priv = static_cast<callback_private_t*>(vpriv);
+
+  result_t result = priv->thread->findResult(sensor_id_t(priv->sensor));
+  if (result.valid == false) {
+    dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
+    // update the record
+    priv->rec->udf = 1;
+    typedef long(*real_signature)(dbCommon*);
+    (*reinterpret_cast<real_signature>(priv->rec->rset->process))(priv->rec);
+    dbScanUnlock(reinterpret_cast<dbCommon*>(priv->rec));
+    return;
+  } // if
+
+  dbScanLock((dbCommon*)priv->rec);
+  // update the record
+  priv->rec->udf = 0;
+  ::mbbiRecord* const mbbi = reinterpret_cast< ::mbbiRecord*>(priv->rec);
+  mbbi->val = result.value.ival;
+  mbbi->rval = result.rval;
+  typedef long(*real_signature)(dbCommon*);
+  (*reinterpret_cast<real_signature>(priv->rec->rset->process))(reinterpret_cast<dbCommon*>(priv->rec));
+  dbScanUnlock((dbCommon*)priv->rec);
+} // Device::mbbiCallback
+
+
+bool Device::mbbiQuery(const sensor_id_t& _sensor, result_t& _result) {
+  mutex_.lock();
+
+  const ::sensor_reading* const sr = ipmiQuery(_sensor);
+  if (!sr || !sr->s_reading_valid || sr->s_has_analog_value) {
+    mutex_.unlock();
+    _result.valid = false;
+    SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +_sensor.ipmb << "/0x" << +_sensor.sensor << ": Read invalid.");
+    return false;
+  } // if
+
+  _result.value.ival = sr->s_reading;
+  _result.rval = sr->s_reading;
+  mutex_.unlock();
+  _result.valid = true;
+  return true;
+} // Device::mbbiQuery
 
 
 const ::sensor_reading* Device::ipmiQuery(const sensor_id_t& _sensor) {
@@ -250,54 +298,59 @@ void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor
 } // Device::handleCompactSensor
 
 
-void Device::initAiRecord(aiRecord* _pai) {
-  sensor_id_t id(_pai->inp);
+Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _inp) {
+  sensor_id_t id(_inp);
   sensor_list_t::const_iterator i = sensors_.find(id);
   if (i == sensors_.end()) {
     SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +id.ipmb << "/0x" << +id.sensor << " not found.");
-    return;
+    return any_sensor_ptr();
   } // if
 
   dpvt_t* priv = new dpvt_t;
-  callbackSetCallback(aiCallback, &priv->cb);
   callbackSetPriority(priorityLow, &priv->cb);
   callback_private_t* cb_priv = new callback_private_t(
-    reinterpret_cast< ::dbCommon*>(_pai), id, readerThread_);
+    reinterpret_cast< ::dbCommon*>(_rec), id, readerThread_);
   callbackSetUser(cb_priv, &priv->cb);
   priv->cb.timer = NULL;
-  _pai->dpvt = priv;
+  _rec->dpvt = priv;
 
-  if (strlen(_pai->desc) == 0) {
+  if (strlen(_rec->desc) == 0) {
     switch (i->second.type) {
       case SDR_RECORD_TYPE_FULL_SENSOR:
-        strncpy(_pai->desc, reinterpret_cast<const char*>(i->second.full->id_string), 40);
+        strncpy(_rec->desc, reinterpret_cast<const char*>(i->second.full->id_string), 40);
         break;
       case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        strncpy(_pai->desc, reinterpret_cast<const char*>(i->second.compact->id_string), 40);
+        strncpy(_rec->desc, reinterpret_cast<const char*>(i->second.compact->id_string), 40);
         break;
       default:
         std::cerr << "Unexpected type 0x" << std::hex << +i->second.common->sensor.type << std::endl;
     }
-    _pai->desc[40] = '\0';
+    _rec->desc[40] = '\0';
   } // if
+  return i->second;
+}
+
+void Device::initAiRecord(::aiRecord* _pai) {
+  auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pai), _pai->inp);
+  callbackSetCallback(aiCallback, &static_cast<dpvt_t*>(_pai->dpvt)->cb);
 
   SuS_LOG_STREAM(finest, log_id(), "SENSOR " << +_pai->inp.value.abio.card);
   SuS_LOG_STREAM(finest, log_id(), "  THRESH "
-                 << +i->second.common->mask.type.threshold.read.unr << " "
-                 << +i->second.common->mask.type.threshold.read.ucr << " "
-                 << +i->second.common->mask.type.threshold.read.unc << " "
-                 << +i->second.common->mask.type.threshold.read.lnr << " "
-                 << +i->second.common->mask.type.threshold.read.lcr << " "
-                 << +i->second.common->mask.type.threshold.read.lnc);
+                 << +i.common->mask.type.threshold.read.unr << " "
+                 << +i.common->mask.type.threshold.read.ucr << " "
+                 << +i.common->mask.type.threshold.read.unc << " "
+                 << +i.common->mask.type.threshold.read.lnr << " "
+                 << +i.common->mask.type.threshold.read.lcr << " "
+                 << +i.common->mask.type.threshold.read.lnc);
   SuS_LOG_STREAM(finest, log_id(), "  HYSTERESIS "
-                 << +i->second.common->sensor.capabilities.hysteresis);
-  if (i->second.type == SDR_RECORD_TYPE_FULL_SENSOR) {
-    SuS_LOG_STREAM(finest, log_id(), "  LINEAR " << +i->second.full->linearization);
+                 << +i.common->sensor.capabilities.hysteresis);
+  if (i.type == SDR_RECORD_TYPE_FULL_SENSOR) {
+    SuS_LOG_STREAM(finest, log_id(), "  LINEAR " << +i.full->linearization);
   }
 
   // TODO: for compact sensor
-  if (i->second.common->sensor.type == SDR_RECORD_TYPE_FULL_SENSOR) {
-    ::sdr_record_full_sensor* const sdr = i->second.full;
+  if (i.common->sensor.type == SDR_RECORD_TYPE_FULL_SENSOR) {
+    ::sdr_record_full_sensor* const sdr = i.full;
     // swap for 1/x conversions, cf. section 36.5 of IPMI specification
     bool swap_hi_lo = (sdr->linearization == SDR_SENSOR_L_1_X);
 
@@ -358,6 +411,12 @@ void Device::initAiRecord(aiRecord* _pai) {
     } // if
   }
 } // Device::initAiRecord
+
+
+void Device::initMbbiRecord(::mbbiRecord* _pmbbi) {
+  auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
+  callbackSetCallback(mbbiCallback, &static_cast<dpvt_t*>(_pmbbi->dpvt)->cb);
+} // Device::initMbbiRecord
 
 
 void Device::iterateSDRs(slave_addr_t _addr, bool _force_internal) {
@@ -425,6 +484,26 @@ bool Device::readAiSensor(::aiRecord* _pai) {
     return true;
   } // else
 } // Device::readAiSensor
+
+
+bool Device::readMbbiSensor(::mbbiRecord* _pmbbi) {
+  if (!_pmbbi->dpvt) {
+    // when dpvt is not set, init failed
+    _pmbbi->udf = 1;
+    return false;
+  } // if
+  if (!_pmbbi->pact) {
+    _pmbbi->pact = TRUE;
+    readerThread_->enqueueSensorRead(query_job_t(_pmbbi->inp, &Device::mbbiQuery));
+    dpvt_t* priv = static_cast<dpvt_t*>(_pmbbi->dpvt);
+    ::callbackRequestDelayed(&priv->cb, 1.0);
+    return true;
+    // start async. operation
+  } else {
+    _pmbbi->pact = FALSE;
+    return true;
+  } // else
+} // Device::readMbbiSensor
 
 
 Device::query_job_t::query_job_t(const ::link& _loc, query_func_t _f)
