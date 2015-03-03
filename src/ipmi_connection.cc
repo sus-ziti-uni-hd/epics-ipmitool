@@ -11,6 +11,15 @@ extern "C" {
 #include <dbCommon.h>
 #include <errlog.h>
 
+#include <logger.h>
+#include <sstream>
+#include <subsystem_registrator.h>
+
+
+namespace {
+SuS::logfile::subsystem_registrator log_id("IPMIConn");
+} // namespace
+
 
 namespace {
 
@@ -66,7 +75,10 @@ extern "C" {
 
   void ipmiScanDevice(int _id) {
     IPMIIOC::intf_map_t::const_iterator it = IPMIIOC::s_interfaces.find(_id);
-    if (it == IPMIIOC::s_interfaces.end()) return;
+    if (it == IPMIIOC::s_interfaces.end()) {
+      SuS_LOG_STREAM(warning, log_id(), "Device " << _id << " not found.");
+      return;
+    }
     it->second->detectSensors();
   } // ipmiScanDevice
 
