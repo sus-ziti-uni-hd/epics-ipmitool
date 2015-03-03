@@ -191,19 +191,21 @@ bool Device::connect(const std::string& _hostname, const std::string& _username,
   ::ipmi_intf_session_set_password(intf_, const_cast<char*>(_password.c_str()));
   if (_privlevel > 0) ::ipmi_intf_session_set_privlvl(intf_, (uint8_t)_privlevel);
 
+  if ((intf_->open == NULL) || (intf_->open(intf_) == -1)) {
+    SuS_LOG_STREAM(severe, log_id(), "Connection to '" << _hostname << "' failed.");
+    ::ipmi_cleanup(intf_);
+    intf_ = NULL;
+    return false;
+  } // if
+  // else
+  SuS_LOG_STREAM(config, log_id(), "Connected to '" << _hostname << "'.");
+
+  local_addr_ = intf_->target_addr;
+
   SuS_LOG(finer, log_id(), "Starting ReaderThread.");
   readerThread_ = new ReaderThread(this);
   readerThread_->start();
 
-  if (intf_->open != NULL) {
-    if (intf_->open(intf_) == -1) {
-      SuS_LOG_STREAM(severe, log_id(), "Connection to '" << _hostname << "' failed.");
-      ::ipmi_cleanup(intf_);
-      intf_ = NULL;
-      return false;
-    } // if
-  } // if
-  local_addr_ = intf_->target_addr;
   return true;
 } // Device::connect
 
