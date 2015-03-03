@@ -73,7 +73,7 @@ class Device {
     void find_ipmb();
     void iterateSDRs(slave_addr_t _addr, bool _force_internal = false);
 
-    ::ipmi_intf* intf_;
+    ::ipmi_intf* intf_ = nullptr;
 
     typedef struct {
       uint8_t type;
