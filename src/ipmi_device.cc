@@ -237,7 +237,7 @@ void Device::detectSensors() {
         ss << " : compact '" << i->second.compact->id_string << "', event type " << +i->second.common->event_type << std::ends;
         break;
       default:
-        ss << " : unexpected type 0x" << std::hex << +i->second.common->sensor.type << std::ends;
+        ss << " : unexpected type 0x" << std::hex << +i->second.type << std::ends;
     }
     SuS_LOG(finer, log_id(), ss.str());
   } // for i
