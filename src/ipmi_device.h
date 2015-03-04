@@ -29,6 +29,7 @@ struct result_t;
 
 class Device {
   public:
+    Device(short _id);
     ~Device();
 
     bool connect(const std::string& _hostname, const std::string& _username,
@@ -41,6 +42,7 @@ class Device {
     bool readMbbiSensor(::mbbiRecord* _rec);
 
     void detectSensors();
+    void dumpDatabase(const std::string& _file);
 
     bool ping();
 
@@ -88,6 +90,7 @@ class Device {
 
     any_sensor_ptr initInputRecord(::dbCommon* _rec, const ::link& _inp);
 
+    short id_;
     ::epicsMutex mutex_;
     ReaderThread* readerThread_;
     uint8_t local_addr_;

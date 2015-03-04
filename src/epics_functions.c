@@ -34,6 +34,19 @@ static void ipmiScanDeviceCallFunc(const iocshArgBuf* _args) {
 } // ipmiScanDeviceCallFunc
 
 
+/* ipmiDumpDatabase */
+static const iocshArg ipmiDumpDatabaseArg0 = { "connection id", iocshArgInt };
+static const iocshArg ipmiDumpDatabaseArg1 = { "output file", iocshArgString };
+static const iocshArg* ipmiDumpDatabaseArgs[ 2 ] = { &ipmiDumpDatabaseArg0,
+    &ipmiDumpDatabaseArg1};
+static const iocshFuncDef ipmiDumpDatabaseFuncDef = { "ipmiDumpDatabase", 2,
+  ipmiDumpDatabaseArgs };
+
+static void ipmiDumpDatabaseCallFunc(const iocshArgBuf* _args) {
+  ipmiDumpDatabase(_args[0].ival, _args[1].sval);
+} // ipmiDumpDatabaseCallFunc
+
+
 /* register the commands */
 static void ipmiRegisterCommands(void) {
   static int firstTime = 1;
@@ -41,6 +54,7 @@ static void ipmiRegisterCommands(void) {
     firstTime = 0;
     iocshRegister(&ipmiConnectFuncDef, ipmiConnectCallFunc);
     iocshRegister(&ipmiScanDeviceFuncDef, ipmiScanDeviceCallFunc);
+    iocshRegister(&ipmiDumpDatabaseFuncDef, ipmiDumpDatabaseCallFunc);
   } // if
 } // ipmiRegisterCommands
 

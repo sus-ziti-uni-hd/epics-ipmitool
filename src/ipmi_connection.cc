@@ -39,7 +39,7 @@ extern "C" {
     ::log_init("ipmitool-ioc", 0, ::verbose);
 
     try {
-      IPMIIOC::Device* d = new IPMIIOC::Device();
+      IPMIIOC::Device* d = new IPMIIOC::Device(_id);
       d->connect(_hostname, _username, _password, _privlevel);
       IPMIIOC::s_interfaces[_id] = d;
     } catch (std::bad_alloc& ba) {
@@ -82,4 +82,17 @@ extern "C" {
     it->second->detectSensors();
   } // ipmiScanDevice
 
+
+  void ipmiDumpDatabase(int _id, const char* _file) {
+    if (!_file) {
+      SuS_LOG(warning, log_id(), "No filename provided.");
+      return;
+    }
+    const auto& it = IPMIIOC::s_interfaces.find(_id);
+    if (it == IPMIIOC::s_interfaces.end()) {
+      SuS_LOG(warning, log_id(), "Device not known.");
+      return;
+    }
+    it->second->dumpDatabase(_file);
+  }
 } // extern "C"

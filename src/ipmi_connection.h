@@ -21,6 +21,8 @@ void ipmiReadMbbiSensor(mbbiRecord* _rec);
 
 void ipmiScanDevice(int _id);
 
+void ipmiDumpDatabase(int _id, const char* _file);
+
 #ifdef __cplusplus
 }
 #endif

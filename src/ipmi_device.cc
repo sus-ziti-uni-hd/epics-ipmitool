@@ -17,6 +17,7 @@
 #include <logger.h>
 #include <sstream>
 #include <subsystem_registrator.h>
+#include <fstream>
 
 extern "C" {
 // for ipmitool
@@ -31,6 +32,11 @@ SuS::logfile::subsystem_registrator log_id("IPMIDev");
 
 
 namespace IPMIIOC {
+
+Device::Device(short _id) {
+  id_ = _id;
+}
+
 
 Device::~Device() {
   if (intf_->close) intf_->close(intf_);
@@ -242,6 +248,56 @@ void Device::detectSensors() {
     SuS_LOG(finer, log_id(), ss.str());
   } // for i
 } // Device::detectSensors
+
+
+void Device::dumpDatabase(const std::string& _file) {
+  if (!intf_) {
+    SuS_LOG(warning, log_id(), "Not connected.");
+    return;
+  }
+
+  std::ofstream of(_file);
+  if(!of.is_open()) {
+    SuS_LOG_STREAM(warning, log_id(), "Cannot open '" << _file << "' for writing.");
+    return;
+  }
+
+  of << "# This file has been automatically created." << std::endl
+          << "# It is not expected to work as-is." << std::endl
+          << "# Please update the PV names and add SCAN fields as required." << std::endl;
+
+  for (const auto& sensor : sensors_) {
+    std::string name;
+    switch (sensor.second.type) {
+      case SDR_RECORD_TYPE_FULL_SENSOR:
+        name = reinterpret_cast<const char*>(sensor.second.full->id_string);
+        break;
+      case SDR_RECORD_TYPE_COMPACT_SENSOR:
+        name = reinterpret_cast<const char*>(sensor.second.compact->id_string);
+        break;
+      default:
+        std::stringstream ss;
+        ss << "unexpected type 0x" << std::hex << +sensor.second.type;
+        name = ss.str();
+    }
+
+    // take a reading to check the return value type.
+    const ::sensor_reading* const sr { ipmiQuery(sensor.first) };
+    const std::string rectype { sr->s_has_analog_value ? "ai" : "mbbi" };
+    of << std::endl
+            << "record(" << rectype << ", \"" << name << "\")" << std::endl
+            << "{" << std::endl
+            << "   field(DTYP, \"ipmitool\")" << std::endl
+            << "   field(INP,  \"#L" << +id_ << " A" << +sensor.first.ipmb
+            << " C" << +sensor.first.sensor << " S00 @0\")" << std::endl
+            << "}" << std::endl;
+  } // for sensor
+ 
+  if (!of.good()) {
+    SuS_LOG(warning, log_id(), "Write failed.");
+  }
+  of.close();
+} // Device::dumpDatabase
 
 
 void Device::find_ipmb() {
