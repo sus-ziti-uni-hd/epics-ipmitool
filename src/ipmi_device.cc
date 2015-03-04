@@ -245,7 +245,6 @@ void Device::detectSensors() {
 
 
 void Device::find_ipmb() {
-  std::set<slave_addr_t> ret;
   if (!check_PICMG()) return;
 
   // from ipmitool
