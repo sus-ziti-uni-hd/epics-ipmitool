@@ -185,7 +185,7 @@ bool Device::check_PICMG() {
 
 bool Device::connect(const std::string& _hostname, const std::string& _username,
                      const std::string& _password, int _privlevel) {
-  SuS_LOG_STREAM(info, log_id(), "Connecting to '" << _hostname << "'.");
+  SuS_LOG_STREAM(config, log_id(), "Connecting to '" << _hostname << "'.");
   intf_ = ::ipmi_intf_load(const_cast<char*>("lan"));
   if (!intf_) {
     SuS_LOG(severe, log_id(), "Cannot load lan interface.");
@@ -204,7 +204,7 @@ bool Device::connect(const std::string& _hostname, const std::string& _username,
     return false;
   } // if
   // else
-  SuS_LOG_STREAM(config, log_id(), "Connected to '" << _hostname << "'.");
+  SuS_LOG_STREAM(info, log_id(), "Connected to '" << _hostname << "'.");
 
   local_addr_ = intf_->target_addr;
 
