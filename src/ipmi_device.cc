@@ -212,10 +212,10 @@ bool Device::connect(const std::string& _hostname, const std::string& _username,
 
 void Device::detectSensors() {
   if (!intf_) {
-    SuS_LOG(fine, log_id(), "Not scanning: not connected.");
+    SuS_LOG(warning, log_id(), "Not scanning: not connected.");
     return;
   }
-  //sensors_.clear();
+  sensors_.clear();
   iterateSDRs(local_addr_);
   if (sensors_.size() == 0) iterateSDRs(local_addr_, true);
   find_ipmb();
