@@ -228,23 +228,31 @@ void Device::detectSensors() {
   for (std::set<slave_addr_t>::const_iterator i = slaves_.begin(); i != slaves_.end();
        ++i) iterateSDRs(*i);
 
-  SuS_LOG_STREAM(finer, log_id(), "Total sensor count: " << sensors_.size());
+  SuS_LOG_STREAM(fine, log_id(), "Total sensor count: " << sensors_.size());
 
   for (sensor_list_t::iterator i = sensors_.begin();
        i != sensors_.end(); ++i) {
     std::stringstream ss;
-    ss << "   @ 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.ipmb
+    ss << "sensor 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.ipmb
        << "/0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.sensor;
     switch (i->second.type) {
       case SDR_RECORD_TYPE_FULL_SENSOR:
-        ss << " : full '" << i->second.full->id_string << "', event type " << +i->second.common->event_type << std::ends;
+        ss << " : full '" << i->second.full->id_string
+                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->event_type
+                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->sensor.type;
         break;
       case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        ss << " : compact '" << i->second.compact->id_string << "', event type " << +i->second.common->event_type << std::ends;
+        ss << " : compact '" << i->second.compact->id_string
+                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->event_type
+                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->sensor.type;
         break;
       default:
-        ss << " : unexpected type 0x" << std::hex << +i->second.type << std::ends;
+        ss << " : unexpected type 0x" << std::hex << +i->second.type;
     }
+    if (i->second.common->sensor.type <= SENSOR_TYPE_MAX)
+      ss << " (" << ::sensor_type_desc[i->second.common->sensor.type] << ")";
+    ss << "." << std::ends;
+
     SuS_LOG(finer, log_id(), ss.str());
   } // for i
 } // Device::detectSensors
@@ -284,6 +292,13 @@ void Device::dumpDatabase(const std::string& _file) {
     // take a reading to check the return value type.
     const ::sensor_reading* const sr { ipmiQuery(sensor.first) };
     const std::string rectype { sr->s_has_analog_value ? "ai" : "mbbi" };
+    of << std::endl
+            << "# " << name
+            << ", event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor.second.common->event_type
+            << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor.second.common->sensor.type;
+    if (sensor.second.common->sensor.type <= SENSOR_TYPE_MAX)
+      of << " (" << ::sensor_type_desc[sensor.second.common->sensor.type] << ")";
+
     of << std::endl
             << "record(" << rectype << ", \"" << name << "\")" << std::endl
             << "{" << std::endl
