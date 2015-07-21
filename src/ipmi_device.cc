@@ -421,7 +421,7 @@ void Device::initAiRecord(::aiRecord* _pai) {
   }
 
   // TODO: for compact sensor
-  if (i.common->sensor.type == SDR_RECORD_TYPE_FULL_SENSOR) {
+  if (i.type == SDR_RECORD_TYPE_FULL_SENSOR) {
     ::sdr_record_full_sensor* const sdr = i.full;
     // swap for 1/x conversions, cf. section 36.5 of IPMI specification
     bool swap_hi_lo = (sdr->linearization == SDR_SENSOR_L_1_X);
