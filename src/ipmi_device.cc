@@ -492,7 +492,7 @@ void Device::initMbbiRecord(::mbbiRecord* _pmbbi) {
 
 
 void Device::iterateSDRs(slave_addr_t _addr, bool _force_internal) {
-  SuS_LOG_STREAM(finest, log_id(), "iterating @0x" << std::hex << +_addr << std::dec << (_force_internal ? ", internal." : "."));
+  SuS_LOG_STREAM(finest, log_id(), "iterating @0x" << std::hex << +_addr << (_force_internal ? ", internal." : "."));
   intf_->target_addr = _addr;
 
   ::ipmi_sdr_iterator* itr = ::ipmi_sdr_start(intf_, _force_internal ? 1 : 0);
@@ -523,7 +523,7 @@ void Device::iterateSDRs(slave_addr_t _addr, bool _force_internal) {
     } // switch
   } // while
 
-  SuS_LOG_STREAM(finer, log_id(), "found " << found << " sensors @0x" << std::hex << +_addr << ".");
+  SuS_LOG_STREAM(finer, log_id(), "found " << found << " sensors @0x" << std::hex << +_addr << (_force_internal ? ", internal." : "."));
 } // Device::iterateSDRs
 
 
