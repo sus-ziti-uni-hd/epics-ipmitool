@@ -302,7 +302,7 @@ void Device::dumpDatabase(const std::string& _file) {
     of << std::endl
             << "record(" << rectype << ", \"" << name << "\")" << std::endl
             << "{" << std::endl
-            << "   field(DTYP, \"ipmitool\")" << std::endl
+            << "   field(DTYP, \"ipmitool\")" << std::endl << std::dec
             << "   field(INP,  \"#L" << +id_ << " A" << +sensor.first.ipmb
             << " C" << +sensor.first.sensor << " S00 @0\")" << std::endl
             << "}" << std::endl;
