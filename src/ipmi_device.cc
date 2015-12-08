@@ -19,6 +19,11 @@
 #include <subsystem_registrator.h>
 #include <fstream>
 
+// UGLY...
+#define class impi_class
+#include <ipmitool/ipmi_sel.h>
+#undef class
+
 extern "C" {
 // for ipmitool
   int verbose = 0;
@@ -129,8 +134,11 @@ void Device::mbbiCallback(::CALLBACK* _cb) {
   // update the record
   priv->rec->udf = 0;
   ::mbbiRecord* const mbbi = reinterpret_cast< ::mbbiRecord*>(priv->rec);
-  mbbi->val = result.value.ival;
-  mbbi->rval = result.rval;
+//  mbbi->val = result.value.ival;
+  mbbi->rval = 0;
+  SuS_LOG_PRINTF(finest, log_id(), "%s data %04x reading %02x", priv->rec->name, result.rval, result.value.ival);
+  while(result.rval >>= 1) ++mbbi->rval;
+  SuS_LOG_PRINTF(finest, log_id(), "%d", mbbi->rval);
   typedef long(*real_signature)(dbCommon*);
   (*reinterpret_cast<real_signature>(priv->rec->rset->process))(reinterpret_cast<dbCommon*>(priv->rec));
   dbScanUnlock((dbCommon*)priv->rec);
@@ -152,7 +160,7 @@ bool Device::mbbiQuery(const sensor_id_t& _sensor, result_t& _result) {
   } // if
 
   _result.value.ival = sr->s_reading;
-  _result.rval = sr->s_reading;
+  _result.rval = ((sr->s_data3 & 0x7FU) << 8) | sr->s_data2;
   mutex_.unlock();
   _result.valid = true;
   return true;
@@ -506,6 +514,41 @@ void Device::initAiRecord(::aiRecord* _pai) {
 void Device::initMbbiRecord(::mbbiRecord* _pmbbi) {
   auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
   callbackSetCallback(mbbiCallback, &static_cast<dpvt_t*>(_pmbbi->dpvt)->cb);
+
+  static const std::array<epicsUInt32 mbbiRecord::*, 16> mbbiValues = {
+    &mbbiRecord::zrvl, &mbbiRecord::onvl, &mbbiRecord::twvl, &mbbiRecord::thvl,
+    &mbbiRecord::frvl, &mbbiRecord::fvvl, &mbbiRecord::sxvl, &mbbiRecord::svvl,
+    &mbbiRecord::eivl, &mbbiRecord::nivl, &mbbiRecord::tevl, &mbbiRecord::elvl,
+    &mbbiRecord::tvvl, &mbbiRecord::ttvl, &mbbiRecord::ftvl, &mbbiRecord::ffvl
+  };
+
+  static const std::array<char (mbbiRecord::*)[26], 16> mbbiStrings = {
+    &mbbiRecord::zrst, &mbbiRecord::onst, &mbbiRecord::twst, &mbbiRecord::thst,
+    &mbbiRecord::frst, &mbbiRecord::fvst, &mbbiRecord::sxst, &mbbiRecord::svst,
+    &mbbiRecord::eist, &mbbiRecord::nist, &mbbiRecord::test, &mbbiRecord::elst,
+    &mbbiRecord::tvst, &mbbiRecord::ttst, &mbbiRecord::ftst, &mbbiRecord::ffst
+  };
+
+  struct ipmi_event_sensor_types *evt;
+  uint8_t typ;
+  if (i.common->event_type == 0x6f) {
+    evt = sensor_specific_types;
+    typ = i.common->sensor.type;
+  } else {
+    evt = generic_event_types;
+    typ = i.common->event_type;
+  }
+
+  for (; evt->type != NULL; evt++) {
+    if ((evt->code != typ) || (evt->data != 0xFF))
+    {
+      continue;
+    }
+
+    _pmbbi->*mbbiValues[evt->offset] = evt->offset;
+    strncpy(_pmbbi->*mbbiStrings[evt->offset], evt->desc, 26);
+    (_pmbbi->*mbbiStrings[evt->offset])[25] = '\0';
+  }
 } // Device::initMbbiRecord
 
 

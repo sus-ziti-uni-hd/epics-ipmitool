@@ -22,7 +22,7 @@ static long init_ai_record(aiRecord* _pai) {
 
 static long read_mbbi_record(mbbiRecord* _pmbbi) {
    ipmiReadMbbiSensor(_pmbbi);
-   return 2;
+   return 0;
 }
 
 static long init_mbbi_record(mbbiRecord* _pmbbi) {
