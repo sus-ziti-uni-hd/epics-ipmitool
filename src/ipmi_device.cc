@@ -63,7 +63,7 @@ void Device::aiCallback(::CALLBACK* _cb) {
 
     if (*priv->good) {
        *priv->good = false;
-      SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +priv->sensor.ipmb << "/0x" << +priv->sensor.sensor << ": Read invalid.");
+      SuS_LOG_PRINTF(warning, log_id(), "sensor 0x%02x/0x%02x: Read invalid.", priv->sensor.ipmb, priv->sensor.sensor);
     } // if
 
     return;
@@ -80,7 +80,7 @@ void Device::aiCallback(::CALLBACK* _cb) {
   dbScanUnlock((dbCommon*)priv->rec);
   if (!*priv->good) {
      *priv->good = true;
-     SuS_LOG_STREAM(info, log_id(), "sensor 0x" << std::hex << +priv->sensor.ipmb << "/0x" << +priv->sensor.sensor << ": Read valid again.");
+     SuS_LOG_PRINTF(info, log_id(), "sensor 0x%02x/0x%02x: Read valid again.", priv->sensor.ipmb, priv->sensor.sensor);
   } // if
 } // Device::aiCallback
 
@@ -119,7 +119,7 @@ void Device::mbbiCallback(::CALLBACK* _cb) {
 
     if (*priv->good) {
        *priv->good = false;
-      SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +priv->sensor.ipmb << "/0x" << +priv->sensor.sensor << ": Read invalid.");
+      SuS_LOG_PRINTF(warning, log_id(), "sensor 0x%02x/0x%02x: Read invalid.", priv->sensor.ipmb, priv->sensor.sensor);
     } // if
 
     return;
@@ -136,7 +136,7 @@ void Device::mbbiCallback(::CALLBACK* _cb) {
   dbScanUnlock((dbCommon*)priv->rec);
   if (!*priv->good) {
      *priv->good = true;
-     SuS_LOG_STREAM(info, log_id(), "sensor 0x" << std::hex << +priv->sensor.ipmb << "/0x" << +priv->sensor.sensor << ": Read valid again.");
+     SuS_LOG_PRINTF(info, log_id(), "sensor 0x%02x/0x%02x: Read valid again.", priv->sensor.ipmb, priv->sensor.sensor);
   } // if
 } // Device::mbbiCallback
 
