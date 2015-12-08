@@ -60,6 +60,12 @@ void Device::aiCallback(::CALLBACK* _cb) {
     typedef long(*real_signature)(dbCommon*);
     (*reinterpret_cast<real_signature>(priv->rec->rset->process))(priv->rec);
     dbScanUnlock(reinterpret_cast<dbCommon*>(priv->rec));
+
+    if (*priv->good) {
+       *priv->good = false;
+      SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +priv->sensor.ipmb << "/0x" << +priv->sensor.sensor << ": Read invalid.");
+    } // if
+
     return;
   } // if
 
@@ -72,6 +78,10 @@ void Device::aiCallback(::CALLBACK* _cb) {
   typedef long(*real_signature)(dbCommon*);
   (*reinterpret_cast<real_signature>(priv->rec->rset->process))(reinterpret_cast<dbCommon*>(priv->rec));
   dbScanUnlock((dbCommon*)priv->rec);
+  if (!*priv->good) {
+     *priv->good = true;
+     SuS_LOG_STREAM(info, log_id(), "sensor 0x" << std::hex << +priv->sensor.ipmb << "/0x" << +priv->sensor.sensor << ": Read valid again.");
+  } // if
 } // Device::aiCallback
 
 
@@ -82,7 +92,6 @@ bool Device::aiQuery(const sensor_id_t& _sensor, result_t& _result) {
   if (!sr || !sr->s_reading_valid || !sr->s_has_analog_value) {
     mutex_.unlock();
     _result.valid = false;
-    SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +_sensor.ipmb << "/0x" << +_sensor.sensor << ": Read invalid.");
     return false;
   } // if
 
@@ -107,6 +116,12 @@ void Device::mbbiCallback(::CALLBACK* _cb) {
     typedef long(*real_signature)(dbCommon*);
     (*reinterpret_cast<real_signature>(priv->rec->rset->process))(priv->rec);
     dbScanUnlock(reinterpret_cast<dbCommon*>(priv->rec));
+
+    if (*priv->good) {
+       *priv->good = false;
+      SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +priv->sensor.ipmb << "/0x" << +priv->sensor.sensor << ": Read invalid.");
+    } // if
+
     return;
   } // if
 
@@ -119,6 +134,10 @@ void Device::mbbiCallback(::CALLBACK* _cb) {
   typedef long(*real_signature)(dbCommon*);
   (*reinterpret_cast<real_signature>(priv->rec->rset->process))(reinterpret_cast<dbCommon*>(priv->rec));
   dbScanUnlock((dbCommon*)priv->rec);
+  if (!*priv->good) {
+     *priv->good = true;
+     SuS_LOG_STREAM(info, log_id(), "sensor 0x" << std::hex << +priv->sensor.ipmb << "/0x" << +priv->sensor.sensor << ": Read valid again.");
+  } // if
 } // Device::mbbiCallback
 
 
@@ -129,7 +148,6 @@ bool Device::mbbiQuery(const sensor_id_t& _sensor, result_t& _result) {
   if (!sr || !sr->s_reading_valid || sr->s_has_analog_value) {
     mutex_.unlock();
     _result.valid = false;
-    SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +_sensor.ipmb << "/0x" << +_sensor.sensor << ": Read invalid.");
     return false;
   } // if
 
@@ -372,7 +390,7 @@ void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor
 
 Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _inp) {
   sensor_id_t id(_inp);
-  sensor_list_t::const_iterator i = sensors_.find(id);
+  sensor_list_t::iterator i = sensors_.find(id);
   if (i == sensors_.end()) {
     SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +id.ipmb << "/0x" << +id.sensor << " not found.");
     return any_sensor_ptr();
@@ -381,7 +399,7 @@ Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _
   dpvt_t* priv = new dpvt_t;
   callbackSetPriority(priorityLow, &priv->cb);
   callback_private_t* cb_priv = new callback_private_t(
-    reinterpret_cast< ::dbCommon*>(_rec), id, readerThread_);
+    reinterpret_cast< ::dbCommon*>(_rec), id, readerThread_, &i->second.good);
   callbackSetUser(cb_priv, &priv->cb);
   priv->cb.timer = NULL;
   _rec->dpvt = priv;

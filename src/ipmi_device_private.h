@@ -11,9 +11,10 @@ struct callback_private_t {
   ::dbCommon* rec;
   sensor_id_t sensor;
   ReaderThread* thread;
+  bool * const good;
 
   callback_private_t(::dbCommon* _rec, const sensor_id_t& _sensor,
-                     ReaderThread* _thread);
+                     ReaderThread* _thread, bool *_good);
 }; // struct callback_private_t
 
 }

@@ -84,6 +84,8 @@ class Device {
         ::sdr_record_full_sensor* full;
         ::sdr_record_compact_sensor* compact;
       };
+      /// last reading was usable.
+      bool good{true};
     } any_sensor_ptr;
     typedef std::map<sensor_id_t, any_sensor_ptr> sensor_list_t;
     sensor_list_t sensors_;
