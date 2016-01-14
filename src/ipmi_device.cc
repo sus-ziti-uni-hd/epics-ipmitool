@@ -196,7 +196,6 @@ void Device::mbbiCallback(::CALLBACK* _cb) {
   mbbi->rval = 0;
   SuS_LOG_PRINTF(finest, log_id(), "%s data %04x reading %02x", priv->rec->name, result.rval, result.value.ival);
   while(result.rval >>= 1) ++mbbi->rval;
-  SuS_LOG_PRINTF(finest, log_id(), "%d", mbbi->rval);
   typedef long(*real_signature)(dbCommon*);
   (*reinterpret_cast<real_signature>(priv->rec->rset->process))(reinterpret_cast<dbCommon*>(priv->rec));
   dbScanUnlock((dbCommon*)priv->rec);
