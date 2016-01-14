@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <aiRecord.h>
+#include <mbbiDirectRecord.h>
 #include <mbbiRecord.h>
 
 void ipmiConnect(int _id, const char* _hostname, const char* _username,
@@ -18,6 +19,10 @@ void ipmiReadAiSensor(aiRecord* _rec);
 void ipmiInitMbbiRecord(mbbiRecord* _rec);
 
 void ipmiReadMbbiSensor(mbbiRecord* _rec);
+
+void ipmiInitMbbiDirectRecord(mbbiDirectRecord* _rec);
+
+void ipmiReadMbbiDirectSensor(mbbiDirectRecord* _rec);
 
 void ipmiScanDevice(int _id);
 

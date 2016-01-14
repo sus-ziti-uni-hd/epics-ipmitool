@@ -2,6 +2,7 @@
 #include <devSup.h>
 #include <epicsExport.h>
 #include <mbbiRecord.h>
+#include <mbbiDirectRecord.h>
 #include <stdlib.h>
 
 #include <stdio.h>
@@ -22,11 +23,21 @@ static long init_ai_record(aiRecord* _pai) {
 
 static long read_mbbi_record(mbbiRecord* _pmbbi) {
    ipmiReadMbbiSensor(_pmbbi);
-   return 2;
+   return 0;
 }
 
 static long init_mbbi_record(mbbiRecord* _pmbbi) {
   ipmiInitMbbiRecord(_pmbbi);
+  return 0;
+}
+
+static long read_mbbiDirect_record(mbbiDirectRecord* _pmbbiDirect) {
+   ipmiReadMbbiDirectSensor(_pmbbiDirect);
+   return 0;
+}
+
+static long init_mbbiDirect_record(mbbiDirectRecord* _pmbbiDirect) {
+  ipmiInitMbbiDirectRecord(_pmbbiDirect);
   return 0;
 }
 
@@ -52,19 +63,35 @@ epicsExportAddress(dset,devIpmitoolAi);
 
 struct {
    long            number;
+   DEVSUPFUN       dev_report;
+   DEVSUPFUN       init;
+   DEVSUPFUN       init_record;
+   DEVSUPFUN       get_ioint_info;
+   DEVSUPFUN       read_mbbi;
+} devIpmitoolMbbi = {
+   5, // number
+   NULL, // dev_report
+   init, // init
+   init_mbbi_record, // init_record
+   NULL, // get_ioint_info
+   read_mbbi_record // read_mbbi
+};
+epicsExportAddress(dset,devIpmitoolMbbi);
+
+struct {
+   long            number;
    DEVSUPFUN       report;
    DEVSUPFUN       init;
    DEVSUPFUN       init_record;
    DEVSUPFUN       get_ioint_info;
-   DEVSUPFUN       read_ai;
-   DEVSUPFUN       special_linconv;
-} devIpmitoolMbbi = {
-   6, // number
-   NULL, // report
+   DEVSUPFUN       read_mbbi;
+} devIpmitoolMbbiDirect = {
+   5, // number
+   NULL, // dev_report
    init, // init
-   init_mbbi_record, // init_record
+   init_mbbiDirect_record, // init_record
    NULL, // get_ioint_info
-   read_mbbi_record, // read_mbbi
-   NULL  // special_linconv
+   read_mbbiDirect_record // read_mbbi
 };
-epicsExportAddress(dset,devIpmitoolMbbi);
+epicsExportAddress(dset,devIpmitoolMbbiDirect);
+
