@@ -20,6 +20,7 @@ extern "C" {
 struct dbCommon;
 struct aiRecord;
 struct link;
+struct mbbiDirectRecord;
 struct mbbiRecord;
 
 namespace IPMIIOC {
@@ -37,6 +38,9 @@ class Device {
 
     void initAiRecord(::aiRecord* _rec);
     bool readAiSensor(::aiRecord* _rec);
+
+    void initMbbiDirectRecord(::mbbiDirectRecord* _rec);
+    bool readMbbiDirectSensor(::mbbiDirectRecord* _rec);
 
     void initMbbiRecord(::mbbiRecord* _rec);
     bool readMbbiSensor(::mbbiRecord* _rec);
@@ -65,6 +69,9 @@ class Device {
 
     static void aiCallback(::CALLBACK* _cb);
     bool aiQuery(const sensor_id_t& _sensor, result_t& _result);
+
+    static void mbbiDirectCallback(::CALLBACK* _cb);
+    bool mbbiDirectQuery(const sensor_id_t& _sensor, result_t& _result);
 
     static void mbbiCallback(::CALLBACK* _cb);
     bool mbbiQuery(const sensor_id_t& _sensor, result_t& _result);

@@ -11,6 +11,7 @@
 #include <aiRecord.h>
 #include <dbAccess.h>
 #include <errlog.h>
+#include <mbbiDirectRecord.h>
 #include <mbbiRecord.h>
 #include <recSup.h>
 
@@ -106,6 +107,63 @@ bool Device::aiQuery(const sensor_id_t& _sensor, result_t& _result) {
   _result.valid = true;
   return true;
 } // Device::aiQuery
+
+
+void Device::mbbiDirectCallback(::CALLBACK* _cb) {
+  void* vpriv;
+  callbackGetUser(vpriv, _cb);
+  callback_private_t* priv = static_cast<callback_private_t*>(vpriv);
+
+  result_t result = priv->thread->findResult(sensor_id_t(priv->sensor));
+  if (result.valid == false) {
+    dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
+    // update the record
+    priv->rec->udf = 1;
+    typedef long(*real_signature)(dbCommon*);
+    (*reinterpret_cast<real_signature>(priv->rec->rset->process))(priv->rec);
+    dbScanUnlock(reinterpret_cast<dbCommon*>(priv->rec));
+
+    if (*priv->good) {
+       *priv->good = false;
+      SuS_LOG_PRINTF(warning, log_id(), "sensor 0x%02x/0x%02x: Read invalid.", priv->sensor.ipmb, priv->sensor.sensor);
+    } // if
+
+    return;
+  } // if
+
+  dbScanLock((dbCommon*)priv->rec);
+  // update the record
+  priv->rec->udf = 0;
+  ::mbbiDirectRecord* const mbbi = reinterpret_cast< ::mbbiDirectRecord*>(priv->rec);
+//  mbbi->val = result.value.ival;
+  mbbi->rval = result.rval;
+  mbbi->val = result.rval;
+  typedef long(*real_signature)(dbCommon*);
+  (*reinterpret_cast<real_signature>(priv->rec->rset->process))(reinterpret_cast<dbCommon*>(priv->rec));
+  dbScanUnlock((dbCommon*)priv->rec);
+  if (!*priv->good) {
+     *priv->good = true;
+     SuS_LOG_PRINTF(info, log_id(), "sensor 0x%02x/0x%02x: Read valid again.", priv->sensor.ipmb, priv->sensor.sensor);
+  } // if
+} // Device::mbbiDirectCallback
+
+
+bool Device::mbbiDirectQuery(const sensor_id_t& _sensor, result_t& _result) {
+  mutex_.lock();
+
+  const ::sensor_reading* const sr = ipmiQuery(_sensor);
+  if (!sr || !sr->s_reading_valid || sr->s_has_analog_value) {
+    mutex_.unlock();
+    _result.valid = false;
+    return false;
+  } // if
+
+  _result.value.ival = sr->s_reading;
+  _result.rval = ((sr->s_data3 & 0x7FU) << 8) | sr->s_data2;
+  mutex_.unlock();
+  _result.valid = true;
+  return true;
+} // Device::mbbiDirectQuery
 
 
 void Device::mbbiCallback(::CALLBACK* _cb) {
@@ -511,6 +569,12 @@ void Device::initAiRecord(::aiRecord* _pai) {
 } // Device::initAiRecord
 
 
+void Device::initMbbiDirectRecord(::mbbiDirectRecord* _pmbbi) {
+  auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
+  callbackSetCallback(mbbiDirectCallback, &static_cast<dpvt_t*>(_pmbbi->dpvt)->cb);
+} // Device::initMbbiDirectRecord
+
+
 void Device::initMbbiRecord(::mbbiRecord* _pmbbi) {
   auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
   callbackSetCallback(mbbiCallback, &static_cast<dpvt_t*>(_pmbbi->dpvt)->cb);
@@ -617,6 +681,26 @@ bool Device::readAiSensor(::aiRecord* _pai) {
     return true;
   } // else
 } // Device::readAiSensor
+
+
+bool Device::readMbbiDirectSensor(::mbbiDirectRecord* _pmbbi) {
+  if (!_pmbbi->dpvt) {
+    // when dpvt is not set, init failed
+    _pmbbi->udf = 1;
+    return false;
+  } // if
+  if (!_pmbbi->pact) {
+    _pmbbi->pact = TRUE;
+    readerThread_->enqueueSensorRead(query_job_t(_pmbbi->inp, &Device::mbbiQuery));
+    dpvt_t* priv = static_cast<dpvt_t*>(_pmbbi->dpvt);
+    ::callbackRequestDelayed(&priv->cb, 1.0);
+    return true;
+    // start async. operation
+  } else {
+    _pmbbi->pact = FALSE;
+    return true;
+  } // else
+} // Device::readMbbiDirectSensor
 
 
 bool Device::readMbbiSensor(::mbbiRecord* _pmbbi) {

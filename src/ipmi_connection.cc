@@ -61,6 +61,18 @@ extern "C" {
   } // ipmiReadAiSensor
 
 
+  void ipmiInitMbbiDirectRecord(mbbiDirectRecord* _rec) {
+    IPMIIOC::Device* d = findDevice(_rec->inp);
+    if (d) d->initMbbiDirectRecord(_rec);
+  } // ipmiInitMbbiDirectRecord
+
+
+  void ipmiReadMbbiDirectSensor(mbbiDirectRecord* _rec) {
+    IPMIIOC::Device* d = findDevice(_rec->inp);
+    if (d) d->readMbbiDirectSensor(_rec);
+  } // ipmiReadMbbiDirectSensor
+
+
   void ipmiInitMbbiRecord(mbbiRecord* _rec) {
     IPMIIOC::Device* d = findDevice(_rec->inp);
     if (d) d->initMbbiRecord(_rec);
