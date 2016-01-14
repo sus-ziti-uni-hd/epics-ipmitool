@@ -52,19 +52,17 @@ epicsExportAddress(dset,devIpmitoolAi);
 
 struct {
    long            number;
-   DEVSUPFUN       report;
+   DEVSUPFUN       dev_report;
    DEVSUPFUN       init;
    DEVSUPFUN       init_record;
    DEVSUPFUN       get_ioint_info;
-   DEVSUPFUN       read_ai;
-   DEVSUPFUN       special_linconv;
+   DEVSUPFUN       read_mbbi;
 } devIpmitoolMbbi = {
-   6, // number
-   NULL, // report
+   5, // number
+   NULL, // dev_report
    init, // init
    init_mbbi_record, // init_record
    NULL, // get_ioint_info
-   read_mbbi_record, // read_mbbi
-   NULL  // special_linconv
+   read_mbbi_record // read_mbbi
 };
 epicsExportAddress(dset,devIpmitoolMbbi);
