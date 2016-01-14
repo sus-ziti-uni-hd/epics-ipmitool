@@ -690,7 +690,7 @@ bool Device::readMbbiDirectSensor(::mbbiDirectRecord* _pmbbi) {
   } // if
   if (!_pmbbi->pact) {
     _pmbbi->pact = TRUE;
-    readerThread_->enqueueSensorRead(query_job_t(_pmbbi->inp, &Device::mbbiQuery));
+    readerThread_->enqueueSensorRead(query_job_t(_pmbbi->inp, &Device::mbbiDirectQuery));
     dpvt_t* priv = static_cast<dpvt_t*>(_pmbbi->dpvt);
     ::callbackRequestDelayed(&priv->cb, 1.0);
     return true;
