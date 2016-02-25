@@ -561,7 +561,7 @@ void Device::initAiRecord(::aiRecord* _pai) {
       if ((sdr->cmn.sensor.capabilities.hysteresis == 1)
           || (sdr->cmn.sensor.capabilities.hysteresis == 2)) {
         uint8_t hyst = std::min(sdr->threshold.hysteresis.positive, sdr->threshold.hysteresis.negative);
-        _pai->hyst = ::sdr_convert_sensor_reading(sdr, hyst);
+        _pai->hyst = ::sdr_convert_sensor_hysterisis(sdr, hyst);
       } // if
     } // if
   }
