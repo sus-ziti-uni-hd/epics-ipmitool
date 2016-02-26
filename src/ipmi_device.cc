@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <iostream>
 #include <string.h>
+#include <algorithm>
 
 #include <alarm.h>
 #include <aiRecord.h>
@@ -372,6 +373,10 @@ void Device::dumpDatabase(const std::string& _file) {
         name = ss.str();
     }
 
+    std::string pvname(name);
+    std::replace( pvname.begin(), pvname.end(), '.', '_');
+    std::replace( pvname.begin(), pvname.end(), ' ', '_');
+
     // take a reading to check the return value type.
     const ::sensor_reading* const sr { ipmiQuery(sensor.first) };
     const std::string rectype { sr->s_has_analog_value ? "ai" : "mbbi" };
@@ -383,11 +388,11 @@ void Device::dumpDatabase(const std::string& _file) {
       of << " (" << ::sensor_type_desc[sensor.second.common->sensor.type] << ")";
 
     of << std::endl
-            << "record(" << rectype << ", \"" << name << "\")" << std::endl
+            << "record(" << rectype << ", \"" << pvname << "\")" << std::endl
             << "{" << std::endl
             << "   field(DTYP, \"ipmitool\")" << std::endl << std::dec
             << "   field(INP,  \"#L" << +id_ << " A" << +sensor.first.ipmb
-            << " C" << +sensor.first.sensor << " S00 @0\")" << std::endl
+            << " C" << +sensor.first.entity << " S" << +sensor.first.insta <<" @"<< name <<"\")" << std::endl
             << "}" << std::endl;
   } // for sensor
  
@@ -422,7 +427,7 @@ void Device::find_ipmb() {
 
 
 void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec) {
-  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num);
+  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num, _rec->cmn.entity.id,  _rec->cmn.entity.instance, _rec->id_string);
   any_sensor_ptr any;
   any.type = SDR_RECORD_TYPE_FULL_SENSOR;
   any.full = _rec;
@@ -438,7 +443,7 @@ void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec
 
 
 void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor* _rec) {
-  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num);
+  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num, _rec->cmn.entity.id,  _rec->cmn.entity.instance, _rec->id_string);
   any_sensor_ptr any;
   any.type = SDR_RECORD_TYPE_COMPACT_SENSOR;
   any.compact = _rec;
@@ -464,7 +469,7 @@ Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _
   dpvt_t* priv = new dpvt_t;
   callbackSetPriority(priorityLow, &priv->cb);
   callback_private_t* cb_priv = new callback_private_t(
-    reinterpret_cast< ::dbCommon*>(_rec), id, readerThread_, &i->second.good);
+    reinterpret_cast< ::dbCommon*>(_rec), i->first, readerThread_, &i->second.good);
   callbackSetUser(cb_priv, &priv->cb);
   priv->cb.timer = NULL;
   _rec->dpvt = priv;
@@ -672,7 +677,7 @@ bool Device::readAiSensor(::aiRecord* _pai) {
     _pai->pact = TRUE;
     readerThread_->enqueueSensorRead(query_job_t(_pai->inp, &Device::aiQuery));
     dpvt_t* priv = static_cast<dpvt_t*>(_pai->dpvt);
-    ::callbackRequestDelayed(&priv->cb, 1.0);
+    ::callbackRequestDelayed(&priv->cb, 10.0);
     return true;
     // start async. operation
   } else {
@@ -692,7 +697,7 @@ bool Device::readMbbiDirectSensor(::mbbiDirectRecord* _pmbbi) {
     _pmbbi->pact = TRUE;
     readerThread_->enqueueSensorRead(query_job_t(_pmbbi->inp, &Device::mbbiDirectQuery));
     dpvt_t* priv = static_cast<dpvt_t*>(_pmbbi->dpvt);
-    ::callbackRequestDelayed(&priv->cb, 1.0);
+    ::callbackRequestDelayed(&priv->cb, 10.0);
     return true;
     // start async. operation
   } else {
@@ -712,7 +717,7 @@ bool Device::readMbbiSensor(::mbbiRecord* _pmbbi) {
     _pmbbi->pact = TRUE;
     readerThread_->enqueueSensorRead(query_job_t(_pmbbi->inp, &Device::mbbiQuery));
     dpvt_t* priv = static_cast<dpvt_t*>(_pmbbi->dpvt);
-    ::callbackRequestDelayed(&priv->cb, 1.0);
+    ::callbackRequestDelayed(&priv->cb, 10.0);
     return true;
     // start async. operation
   } else {

@@ -21,13 +21,17 @@ struct result_t {
 typedef uint8_t slave_addr_t;
 
 struct sensor_id_t {
-  sensor_id_t(slave_addr_t _ipmb, uint8_t _sensor);
+  sensor_id_t(slave_addr_t _ipmb, int16_t _sensor,uint8_t _entity,uint8_t _inst,uint8_t *_name);
   explicit sensor_id_t(const ::link& _loc);
 
   slave_addr_t ipmb;
-  uint8_t sensor;
+  int16_t sensor;
+  uint8_t entity;
+  uint8_t insta;
+  char name[32];
 
   bool operator <(const sensor_id_t& _other) const;
+  bool operator ==(const sensor_id_t& _other) const;
 };
 
 } // namespace IPMIIOC
