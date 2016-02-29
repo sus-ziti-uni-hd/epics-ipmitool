@@ -9,7 +9,7 @@ result_t::result_t() : valid(false) {
 }
 
 sensor_id_t::sensor_id_t(slave_addr_t _ipmb, uint8_t _sensor, uint8_t _entity, uint8_t _inst, const std::string& _name)
-  : ipmb(_ipmb), sensor(_sensor), sensor_set(true), entity(_entity), instance(_inst) {
+  : ipmb(_ipmb), sensor(_sensor), sensor_set(true), entity(_entity), instance(_inst), name(_name) {
 } // Device::sensor_id_t constructor
 
 
