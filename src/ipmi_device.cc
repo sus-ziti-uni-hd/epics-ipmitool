@@ -465,6 +465,8 @@ Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _
     SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +id.ipmb << "/0x" << +id.sensor << " not found.");
     return any_sensor_ptr();
   } // if
+  // id doesn't know its sensor number, but the cached version should.
+  assert(i->first.sensor_set);
 
   dpvt_t* priv = new dpvt_t;
   callbackSetPriority(priorityLow, &priv->cb);
