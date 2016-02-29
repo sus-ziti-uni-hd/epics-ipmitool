@@ -95,7 +95,7 @@ void* ReaderThread::do_run() {
 
     // wait until there is work to do or termination is requested
     ::pthread_mutex_lock(&mutex_);
-    if (do_terminate_) pthread_exit(NULL);
+    if (do_terminate_) ::pthread_exit(NULL);
     if (!queries_.size()) {
       // queries_.size > 0: events have been put in the queue in the
       // meantime. their cond_signal events have been missed!
