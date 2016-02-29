@@ -392,7 +392,7 @@ void Device::dumpDatabase(const std::string& _file) {
             << "{" << std::endl
             << "   field(DTYP, \"ipmitool\")" << std::endl << std::dec
             << "   field(INP,  \"#L" << +id_ << " A" << +sensor.first.ipmb
-            << " C" << +sensor.first.entity << " S" << +sensor.first.insta <<" @"<< name <<"\")" << std::endl
+            << " C" << +sensor.first.entity << " S" << +sensor.first.instance <<" @"<< name <<"\")" << std::endl
             << "}" << std::endl;
   } // for sensor
  
@@ -427,7 +427,7 @@ void Device::find_ipmb() {
 
 
 void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec) {
-  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num, _rec->cmn.entity.id,  _rec->cmn.entity.instance, _rec->id_string);
+  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num, _rec->cmn.entity.id,  _rec->cmn.entity.instance, reinterpret_cast<char *>(_rec->id_string));
   any_sensor_ptr any;
   any.type = SDR_RECORD_TYPE_FULL_SENSOR;
   any.full = _rec;
@@ -443,7 +443,7 @@ void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec
 
 
 void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor* _rec) {
-  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num, _rec->cmn.entity.id,  _rec->cmn.entity.instance, _rec->id_string);
+  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num, _rec->cmn.entity.id,  _rec->cmn.entity.instance, reinterpret_cast<char *>(_rec->id_string));
   any_sensor_ptr any;
   any.type = SDR_RECORD_TYPE_COMPACT_SENSOR;
   any.compact = _rec;
