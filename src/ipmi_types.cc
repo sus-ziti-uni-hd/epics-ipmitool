@@ -2,6 +2,8 @@
 #include "string.h"
 
 #include <dbCommon.h>
+#include <iomanip>
+#include <sstream>
 
 namespace IPMIIOC {
 
@@ -38,5 +40,18 @@ bool sensor_id_t::operator ==(const sensor_id_t& _other) const {
 	&& (instance == _other.instance)
 	&& (name == _other.name);
 } // Device::sensor_id_t::operator ==
+
+
+std::string sensor_id_t::prettyPrint() const {
+   std::ostringstream ss;
+   ss << "ipmb 0x" << std::hex << std::setw(2) << std::setfill('0') << +ipmb
+      << " ent 0x" << std::hex << std::setw(2) << std::setfill('0') << +entity
+      << " inst 0x" << std::hex << std::setw(2) << std::setfill('0') << +instance
+      << " " << name;
+   if (sensor_set) {
+      ss << " (num 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor << ")";
+   }
+   return ss.str();
+}
 
 }

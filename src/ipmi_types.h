@@ -34,6 +34,8 @@ struct sensor_id_t {
 
   bool operator <(const sensor_id_t& _other) const;
   bool operator ==(const sensor_id_t& _other) const;
+
+  std::string prettyPrint() const;
 };
 
 } // namespace IPMIIOC

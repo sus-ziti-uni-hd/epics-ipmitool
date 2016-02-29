@@ -228,7 +228,7 @@ bool Device::mbbiQuery(const sensor_id_t& _sensor, result_t& _result) {
 const ::sensor_reading* Device::ipmiQuery(const sensor_id_t& _sensor) {
   sensor_list_t::const_iterator i = sensors_.find(_sensor);
   if (i == sensors_.end()) {
-    SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +_sensor.ipmb << "/0x" << +_sensor.sensor << " not found.");
+    SuS_LOG_PRINTF(warning, log_id(), "sensor %s not found.", _sensor.prettyPrint().c_str());
     return nullptr;
   }
 
@@ -433,7 +433,7 @@ void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec
   any.full = _rec;
   sensors_[ id ] = any;
   std::stringstream ss;
-  ss << "  found full 0x" << std::hex << +id.ipmb << "/0x" << +id.sensor << std::dec << " : " << _rec->id_string
+  ss << "  found full " << id.prettyPrint()
      << " (0x" << std::hex << std::setw(2) << std::setfill('0') << +_rec->cmn.sensor.type;
   if (_rec->cmn.sensor.type <= SENSOR_TYPE_MAX)
     ss << " => " << ::sensor_type_desc[_rec->cmn.sensor.type];
@@ -449,7 +449,7 @@ void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor
   any.compact = _rec;
   sensors_.emplace(id, any);
   std::stringstream ss;
-  ss << "  found compact 0x" << std::hex << +_addr << "/0x" << +_rec->cmn.keys.sensor_num << std::dec << " : " << _rec->id_string
+  ss << "  found compact " << id.prettyPrint()
      << " (0x" << std::hex << std::setw(2) << std::setfill('0') << +_rec->cmn.sensor.type;
   if (_rec->cmn.sensor.type <= SENSOR_TYPE_MAX)
     ss << " => " << ::sensor_type_desc[_rec->cmn.sensor.type];
@@ -462,7 +462,7 @@ Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _
   sensor_id_t id(_inp);
   sensor_list_t::iterator i = sensors_.find(id);
   if (i == sensors_.end()) {
-    SuS_LOG_STREAM(warning, log_id(), "sensor 0x" << std::hex << +id.ipmb << "/0x" << +id.sensor << " not found.");
+    SuS_LOG_PRINTF(warning, log_id(), "sensor %s not found.", id.prettyPrint().c_str());
     return any_sensor_ptr();
   } // if
   // id doesn't know its sensor number, but the cached version should.
