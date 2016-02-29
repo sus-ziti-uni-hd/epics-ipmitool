@@ -8,13 +8,13 @@ namespace IPMIIOC {
 result_t::result_t() : valid(false) {
 }
 
-sensor_id_t::sensor_id_t(slave_addr_t _ipmb, int16_t _sensor, uint8_t _entity, uint8_t _inst, const std::string& _name)
-  : ipmb(_ipmb), sensor(_sensor), entity(_entity), instance(_inst) {
+sensor_id_t::sensor_id_t(slave_addr_t _ipmb, uint8_t _sensor, uint8_t _entity, uint8_t _inst, const std::string& _name)
+  : ipmb(_ipmb), sensor(_sensor), sensor_set(true), entity(_entity), instance(_inst) {
 } // Device::sensor_id_t constructor
 
 
 sensor_id_t::sensor_id_t(const ::link& _loc)
-  : ipmb(_loc.value.abio.adapter), sensor(-1), entity(_loc.value.abio.card), instance(_loc.value.abio.signal), name(_loc.value.abio.parm) {
+  : ipmb(_loc.value.abio.adapter), sensor(0), sensor_set(false), entity(_loc.value.abio.card), instance(_loc.value.abio.signal), name(_loc.value.abio.parm) {
 } // Device::sensor_id_t constructor
 
 
