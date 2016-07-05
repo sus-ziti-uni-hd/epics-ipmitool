@@ -32,3 +32,4 @@ EPICS_BASE=/home/ritzert/Uni/DEPFET/EPICS/base
 #RULES=/path/to/epics/support/module/rules/x-y
 
 LOGFILE = /home/ritzert/Uni/DEPFET/EPICS/Logfile
+IPMITOOL=/home/ritzert/NO_BACKUP/CVS_from_web/ipmitool

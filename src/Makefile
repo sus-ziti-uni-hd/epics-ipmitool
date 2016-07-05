@@ -21,12 +21,12 @@ ipmitool_SRCS += ipmi_types.cc
 ipmitool_LIBS += $(EPICS_BASE_IOC_LIBS)
 ipmitool_LIBS += Logfile EPICSLog
 
-LDFLAGS += /home/ritzert/NO_BACKUP/CVS_from_web/ipmitool/lib/.libs/libipmitool.a
-LDFLAGS += /home/ritzert/NO_BACKUP/CVS_from_web/ipmitool/src/plugins/.libs/libintf.a
+LDFLAGS += $(IPMITOOL)/lib/.libs/libipmitool.a
+LDFLAGS += $(IPMITOOL)/src/plugins/.libs/libintf.a
 LDFLAGS += -lssl
 
-CXXFLAGS += -I /home/ritzert/NO_BACKUP/CVS_from_web/ipmitool/include
-CXXFLAGS += -I /home/ritzert/NO_BACKUP/CVS_from_web/ipmitool/src/plugins/lan
+CXXFLAGS += -I $(IPMITOOL)/include
+CXXFLAGS += -I $(IPMITOOL)/src/plugins/lan
 CXXFLAGS += -std=c++11
 
 include $(TOP)/configure/RULES
