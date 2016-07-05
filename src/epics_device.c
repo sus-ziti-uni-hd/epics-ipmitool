@@ -7,6 +7,8 @@
 
 #include <stdio.h>
 
+#include "ipmi_connection.h"
+
 static long init(int after) {
    return 0;
 }
