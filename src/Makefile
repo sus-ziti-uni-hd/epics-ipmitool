@@ -8,7 +8,6 @@ LIBRARY_IOC += ipmitool
 
 DBD += ipmitool.dbd
 ipmitool_DBD += Logfile.dbd
-ipmitool_DBD += BAERER.dbd
 
 ipmitool_SRCS += epics_device.c
 ipmitool_SRCS += epics_functions.c
