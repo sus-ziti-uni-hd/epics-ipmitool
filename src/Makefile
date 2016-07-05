@@ -21,13 +21,13 @@ ipmitool_SRCS += ipmi_types.cc
 ipmitool_LIBS += $(EPICS_BASE_IOC_LIBS)
 ipmitool_LIBS += Logfile EPICSLog
 
-LDFLAGS += $(IPMITOOL)/lib/.libs/libipmitool.a
-LDFLAGS += $(IPMITOOL)/src/plugins/.libs/libintf.a
+STATIC_LDLIBS += $(IPMITOOL)/lib/.libs/libipmitool.a
+STATIC_LDLIBS += $(IPMITOOL)/src/plugins/.libs/libintf.a
 LDFLAGS += -lssl
 
-CXXFLAGS += -I $(IPMITOOL)/include
-CXXFLAGS += -I $(IPMITOOL)/src/plugins/lan
-CXXFLAGS += -std=c++11
+USR_INCLUDES += -I $(IPMITOOL)/include
+USR_INCLUDES += -I $(IPMITOOL)/src/plugins/lan
+USR_CXXFLAGS += -std=c++11
 
 include $(TOP)/configure/RULES
 
