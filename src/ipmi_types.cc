@@ -10,44 +10,47 @@ namespace IPMIIOC {
 result_t::result_t() : valid(false) {
 }
 
-sensorcmd_id_t::sensorcmd_id_t(slave_addr_t _ipmb, uint8_t _ipmb_tunnel, uint8_t _param, const std::string& _command)
-  : ipmb(_ipmb), ipmb_tunnel(_ipmb_tunnel), param(_param), command(_command) {
-} // Device::sensorcmd_id_t constructor
+sensor_id_t::sensor_id_t(slave_addr_t _ipmb, uint8_t _sensor, uint8_t _entity, uint8_t _inst, const std::string& _name)
+  : ipmb(_ipmb), sensor(_sensor), sensor_set(true), entity(_entity), instance(_inst), name(_name) {
+} // Device::sensor_id_t constructor
 
 
-sensorcmd_id_t::sensorcmd_id_t(const ::link& _loc)
-  : ipmb(_loc.value.abio.adapter), ipmb_tunnel(_loc.value.abio.card), param(_loc.value.abio.signal), command(_loc.value.abio.parm) {
-} // Device::sensorcmd_id_t constructor
+sensor_id_t::sensor_id_t(const ::link& _loc)
+  : ipmb(_loc.value.abio.adapter), sensor(0), sensor_set(false), entity(_loc.value.abio.card), instance(_loc.value.abio.signal), name(_loc.value.abio.parm) {
+} // Device::sensor_id_t constructor
 
 
-bool sensorcmd_id_t::operator <(const sensorcmd_id_t& _other) const {
+bool sensor_id_t::operator <(const sensor_id_t& _other) const {
   if (ipmb < _other.ipmb) return true;
   if ( ipmb > _other.ipmb) return false;
   // sensor is NOT used 
-  if ( ipmb_tunnel < _other.ipmb_tunnel) return true;
-  if ( ipmb_tunnel > _other.ipmb_tunnel) return false;
-  if ( param < _other.param) return true;
-  if ( param > _other.param) return false;
-  return  command < _other.command;
-} // Device::sensorcmd_id_t::operator <
+  if ( entity < _other.entity) return true;
+  if ( entity > _other.entity) return false;
+  if ( instance < _other.instance) return true;
+  if ( instance > _other.instance) return false;
+  return  name < _other.name;
+} // Device::sensor_id_t::operator <
 
 
-bool sensorcmd_id_t::operator ==(const sensorcmd_id_t& _other) const {
+bool sensor_id_t::operator ==(const sensor_id_t& _other) const {
   // sensor is NOT used 
 
   return (ipmb == _other.ipmb)
-	&& (ipmb_tunnel == _other.ipmb_tunnel)
-	&& (param == _other.param)
-	&& (command == _other.command);
-} // Device::sensorcmd_id_t::operator ==
+	&& (entity == _other.entity)
+	&& (instance == _other.instance)
+	&& (name == _other.name);
+} // Device::sensor_id_t::operator ==
 
 
-std::string sensorcmd_id_t::prettyPrint() const {
+std::string sensor_id_t::prettyPrint() const {
    std::ostringstream ss;
    ss << "ipmb 0x" << std::hex << std::setw(2) << std::setfill('0') << +ipmb
-      << " ipmb_tunnel 0x" << std::hex << std::setw(2) << std::setfill('0') << +ipmb_tunnel
-      << " param 0x" << std::hex << std::setw(2) << std::setfill('0') << +param
-      << " @" << command ;
+      << " ent 0x" << std::hex << std::setw(2) << std::setfill('0') << +entity
+      << " inst 0x" << std::hex << std::setw(2) << std::setfill('0') << +instance
+      << " " << name;
+   if (sensor_set) {
+      ss << " (num 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor << ")";
+   }
    return ss.str();
 }
 

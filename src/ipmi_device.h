@@ -18,10 +18,10 @@ extern "C" {
 #include "ipmi_types.h"
 
 struct dbCommon;
-struct boRecord;
+struct aiRecord;
 struct link;
-struct mbboDirectRecord;
 struct mbbiDirectRecord;
+struct mbbiRecord;
 
 namespace IPMIIOC {
 
@@ -36,55 +36,68 @@ class Device {
     bool connect(const std::string& _hostname, const std::string& _username,
                  const std::string& _password, int _privlevel);
 
-    void initBoRecord(::boRecord* _rec);
-    bool writeBoSensor(::boRecord* _rec);
-
-    void initMbboDirectRecord(::mbboDirectRecord* _rec);
-    bool writeMbboDirectSensor(::mbboDirectRecord* _rec);
+    void initAiRecord(::aiRecord* _rec);
+    bool readAiSensor(::aiRecord* _rec);
 
     void initMbbiDirectRecord(::mbbiDirectRecord* _rec);
     bool readMbbiDirectSensor(::mbbiDirectRecord* _rec);
+
+    void initMbbiRecord(::mbbiRecord* _rec);
+    bool readMbbiSensor(::mbbiRecord* _rec);
+
+    void detectSensors();
+    void dumpDatabase(const std::string& _file);
 
     bool ping();
 
   private:
     friend class ReaderThread;
 
-    struct query_job_t;
-    typedef bool (Device::*query_func_t)(const query_job_t&, result_t&);
+    typedef bool (Device::*query_func_t)(const sensor_id_t&, result_t&);
 
     // description of a job queued for reading.
     // sensor id and function to call for it.
     struct query_job_t {
-      sensorcmd_id_t sensor;
+      sensor_id_t sensor;
       query_func_t query_func;
-      query_result_t result;
 
       query_job_t(const ::link& _loc, query_func_t _f);
-      query_job_t(const ::link& _loc, query_func_t _f, query_result_t result);
     };
 
-    static void boCallback(::CALLBACK* _cb);
-    bool boQuery(const query_job_t&, result_t& _result);
+    void handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec);
+    void handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor* _rec);
 
-    static void mbboDirectCallback(::CALLBACK* _cb);
-    bool mbboDirectQuery(const query_job_t&, result_t& _result);
+    static void aiCallback(::CALLBACK* _cb);
+    bool aiQuery(const sensor_id_t& _sensor, result_t& _result);
 
     static void mbbiDirectCallback(::CALLBACK* _cb);
-    bool mbbiDirectQuery(const query_job_t&, result_t& _result);
+    bool mbbiDirectQuery(const sensor_id_t& _sensor, result_t& _result);
 
-//     const ::sensor_reading* 
-    query_result_t ipmiQuery(const query_job_t&);
+    static void mbbiCallback(::CALLBACK* _cb);
+    bool mbbiQuery(const sensor_id_t& _sensor, result_t& _result);
+
+    const ::sensor_reading* ipmiQuery(const sensor_id_t& _sensor);
+
+    bool check_PICMG();
+    void find_ipmb();
+    void iterateSDRs(slave_addr_t _addr, bool _force_internal = false);
 
     ::ipmi_intf* intf_ = nullptr;
 
     typedef struct {
+      uint8_t type;
+      union {
+        ::sdr_record_common_sensor* common;
+        ::sdr_record_full_sensor* full;
+        ::sdr_record_compact_sensor* compact;
+      };
+      /// last reading was usable.
       bool good{true};
     } any_sensor_ptr;
-    typedef std::map<sensorcmd_id_t, any_sensor_ptr> sensor_list_t;
+    typedef std::map<sensor_id_t, any_sensor_ptr> sensor_list_t;
     sensor_list_t sensors_;
 
-    any_sensor_ptr initOutputRecord(::dbCommon* _rec, const ::link& _link);
+    any_sensor_ptr initInputRecord(::dbCommon* _rec, const ::link& _inp);
 
     short id_;
     ::epicsMutex mutex_;

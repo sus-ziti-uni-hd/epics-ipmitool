@@ -24,17 +24,10 @@ SuS::logfile::subsystem_registrator log_id("IPMIConn");
 namespace {
 
 IPMIIOC::Device* findDevice(const link& _inp) {
-      printf("= findDevice %d ", _inp.value.abio.link);
   IPMIIOC::intf_map_t::const_iterator it = IPMIIOC::s_interfaces.find(
         _inp.value.abio.link);
-  if (it == IPMIIOC::s_interfaces.end()){
-    printf("not found\n");
-    return NULL;
-  }  
-  else{
-    printf(" found\n");
-    return it->second;
-  }
+  if (it == IPMIIOC::s_interfaces.end()) return NULL;
+  else return it->second;
 } // findDevice
 
 } // namespace
@@ -43,9 +36,8 @@ extern "C" {
 
   void ipmiConnect(int _id, const char* _hostname, const char* _username,
                    const char* _password, int _privlevel) {
-    ::log_init("ipmicmd-ioc", 0, 3/*::verbose*/);
+    ::log_init("ipmitool-ioc", 0, ::verbose);
 
-      printf("= ipmi connect id %d\n", _id);
     try {
       IPMIIOC::Device* d = new IPMIIOC::Device(_id);
       d->connect(_hostname, _username, _password, _privlevel);
@@ -57,34 +49,18 @@ extern "C" {
   } // ipmiConnect
 
 
-  void ipmiInitBoRecord(boRecord* _rec) {
-//     printf("ipmiInitBoRecord\n");
-    IPMIIOC::Device* d = findDevice(_rec->out);
-//     printf("ipmiInitBoRecord %p\n",d);
-    if (d) d->initBoRecord(_rec);
+  void ipmiInitAiRecord(aiRecord* _rec) {
+    IPMIIOC::Device* d = findDevice(_rec->inp);
+    if (d) d->initAiRecord(_rec);
   } // ipmiInitAiRecord
 
 
-  void ipmiWriteBoSensor(boRecord* _rec) {
-//     printf("ipmiWriteBoSensor\n");
-    IPMIIOC::Device* d = findDevice(_rec->out);
-//     printf("ipmiWriteBoSensor %p\n",d);
-    if (d) d->writeBoSensor(_rec);
+  void ipmiReadAiSensor(aiRecord* _rec) {
+    IPMIIOC::Device* d = findDevice(_rec->inp);
+    if (d) d->readAiSensor(_rec);
   } // ipmiReadAiSensor
 
 
-  void ipmiInitMbboDirectRecord(mbboDirectRecord* _rec) {
-    IPMIIOC::Device* d = findDevice(_rec->out);
-    if (d) d->initMbboDirectRecord(_rec);
-  } // ipmiInitMbbiDirectRecord
-
-
-  void ipmiWriteMbboDirectSensor(mbboDirectRecord* _rec) {
-    IPMIIOC::Device* d = findDevice(_rec->out);
-    if (d) d->writeMbboDirectSensor(_rec);
-  } // ipmiReadMbbiDirectSensor
-
-  
   void ipmiInitMbbiDirectRecord(mbbiDirectRecord* _rec) {
     IPMIIOC::Device* d = findDevice(_rec->inp);
     if (d) d->initMbbiDirectRecord(_rec);
@@ -97,4 +73,38 @@ extern "C" {
   } // ipmiReadMbbiDirectSensor
 
 
+  void ipmiInitMbbiRecord(mbbiRecord* _rec) {
+    IPMIIOC::Device* d = findDevice(_rec->inp);
+    if (d) d->initMbbiRecord(_rec);
+  } // ipmiInitMbbiRecord
+
+
+  void ipmiReadMbbiSensor(mbbiRecord* _rec) {
+    IPMIIOC::Device* d = findDevice(_rec->inp);
+    if (d) d->readMbbiSensor(_rec);
+  } // ipmiReadMbbiSensor
+
+
+  void ipmiScanDevice(int _id) {
+    IPMIIOC::intf_map_t::const_iterator it = IPMIIOC::s_interfaces.find(_id);
+    if (it == IPMIIOC::s_interfaces.end()) {
+      SuS_LOG_STREAM(warning, log_id(), "Device " << _id << " not found.");
+      return;
+    }
+    it->second->detectSensors();
+  } // ipmiScanDevice
+
+
+  void ipmiDumpDatabase(int _id, const char* _file) {
+    if (!_file) {
+      SuS_LOG(warning, log_id(), "No filename provided.");
+      return;
+    }
+    const auto& it = IPMIIOC::s_interfaces.find(_id);
+    if (it == IPMIIOC::s_interfaces.end()) {
+      SuS_LOG(warning, log_id(), "Device not known.");
+      return;
+    }
+    it->second->dumpDatabase(_file);
+  }
 } // extern "C"

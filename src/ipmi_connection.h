@@ -5,24 +5,28 @@
 extern "C" {
 #endif
 
-#include <boRecord.h>
-#include <mbboDirectRecord.h>
+#include <aiRecord.h>
 #include <mbbiDirectRecord.h>
+#include <mbbiRecord.h>
 
 void ipmiConnect(int _id, const char* _hostname, const char* _username,
                  const char* _password, int _privlevel);
 
-void ipmiInitBoRecord(boRecord* _rec);
-//
-void ipmiWriteBoSensor(boRecord* _rec);
+void ipmiInitAiRecord(aiRecord* _rec);
 
-void ipmiInitMbboDirectRecord(mbboDirectRecord* _rec);
+void ipmiReadAiSensor(aiRecord* _rec);
 
-void ipmiWriteMbboDirectSensor(mbboDirectRecord* _rec);
+void ipmiInitMbbiRecord(mbbiRecord* _rec);
+
+void ipmiReadMbbiSensor(mbbiRecord* _rec);
 
 void ipmiInitMbbiDirectRecord(mbbiDirectRecord* _rec);
 
 void ipmiReadMbbiDirectSensor(mbbiDirectRecord* _rec);
+
+void ipmiScanDevice(int _id);
+
+void ipmiDumpDatabase(int _id, const char* _file);
 
 #ifdef __cplusplus
 }

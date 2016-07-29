@@ -2,7 +2,6 @@
 
 #include "ipmi_device.h"
 
-#include <iostream>
 
 namespace IPMIIOC {
 
@@ -23,9 +22,7 @@ ReaderThread::~ReaderThread() {
 
 void ReaderThread::do_query(const Device::query_job_t& _sensor) {
   result_t result;
-  std::cout << "Query : " << _sensor.sensor.prettyPrint() << std::endl;
-  if ((device_->*_sensor.query_func)(_sensor, result)) {
-    std::cout << "Query Result: " << _sensor.sensor.prettyPrint() << std::endl;
+  if ((device_->*_sensor.query_func)(_sensor.sensor, result)) {
     ::pthread_mutex_lock(&results_mutex_);
     results_[_sensor.sensor] = result;
     ::pthread_mutex_unlock(&results_mutex_);
@@ -35,16 +32,14 @@ void ReaderThread::do_query(const Device::query_job_t& _sensor) {
 
 void ReaderThread::enqueueSensorRead(const Device::query_job_t& _sensor) {
   ::pthread_mutex_lock(&mutex_);
-  std::cout << "Emplace : " << _sensor.sensor.prettyPrint() << std::endl;
   queries_.emplace_back(_sensor);
   ::pthread_cond_signal(&cond_);
   ::pthread_mutex_unlock(&mutex_);
 } // ReaderThread::enqueue
 
 
-result_t ReaderThread::findResult(const sensorcmd_id_t& _sensor) {
+result_t ReaderThread::findResult(const sensor_id_t& _sensor) {
   ::pthread_mutex_lock(&results_mutex_);
-  std::cout << "Find Result : " << _sensor.prettyPrint() << std::endl;
   sensor_reading_map_t::iterator i = results_.find(_sensor);
   if (i == results_.end()) {
     ::pthread_mutex_unlock(&results_mutex_);
