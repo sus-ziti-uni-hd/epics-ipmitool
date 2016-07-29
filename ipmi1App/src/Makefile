@@ -14,7 +14,7 @@ DBD += ipmi1.dbd
 
 # ipmi1.dbd will be made up from these files:
 ipmi1_DBD += base.dbd
-ipmi1_DBD += ipmitool.dbd
+ipmi1_DBD += ipmicmd.dbd
 ipmi1_DBD += Logfile.dbd
 
 # Include dbd files from all support applications:

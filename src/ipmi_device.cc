@@ -9,11 +9,11 @@
 #include <algorithm>
 
 #include <alarm.h>
-#include <aiRecord.h>
+#include <boRecord.h>
 #include <dbAccess.h>
 #include <errlog.h>
 #include <mbbiDirectRecord.h>
-#include <mbbiRecord.h>
+#include <mbboDirectRecord.h>
 #include <recSup.h>
 
 #include <logger.h>
@@ -47,67 +47,7 @@ Device::Device(short _id) {
 
 Device::~Device() {
   if (intf_->close) intf_->close(intf_);
-  for (sensor_list_t::iterator i = sensors_.begin();
-       i != sensors_.end(); ++i) {
-    free(i->second.common);
-  } // for i
 } // Device destructor
-
-
-void Device::aiCallback(::CALLBACK* _cb) {
-  void* vpriv;
-  callbackGetUser(vpriv, _cb);
-  callback_private_t* priv = static_cast<callback_private_t*>(vpriv);
-
-  result_t result = priv->thread->findResult(sensor_id_t(priv->sensor));
-  if (result.valid == false) {
-    dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
-    // update the record
-    priv->rec->udf = 1;
-    typedef long(*real_signature)(dbCommon*);
-    (*reinterpret_cast<real_signature>(priv->rec->rset->process))(priv->rec);
-    dbScanUnlock(reinterpret_cast<dbCommon*>(priv->rec));
-
-    if (*priv->good) {
-       *priv->good = false;
-      SuS_LOG_PRINTF(warning, log_id(), "sensor 0x%02x/0x%02x: Read invalid.", priv->sensor.ipmb, priv->sensor.sensor);
-    } // if
-
-    return;
-  } // if
-
-  dbScanLock((dbCommon*)priv->rec);
-  // update the record
-  priv->rec->udf = 0;
-  ::aiRecord* const ai = reinterpret_cast< ::aiRecord*>(priv->rec);
-  ai->val = result.value.fval;
-  ai->rval = result.rval;
-  typedef long(*real_signature)(dbCommon*);
-  (*reinterpret_cast<real_signature>(priv->rec->rset->process))(reinterpret_cast<dbCommon*>(priv->rec));
-  dbScanUnlock((dbCommon*)priv->rec);
-  if (!*priv->good) {
-     *priv->good = true;
-     SuS_LOG_PRINTF(info, log_id(), "sensor 0x%02x/0x%02x: Read valid again.", priv->sensor.ipmb, priv->sensor.sensor);
-  } // if
-} // Device::aiCallback
-
-
-bool Device::aiQuery(const sensor_id_t& _sensor, result_t& _result) {
-  mutex_.lock();
-
-  const ::sensor_reading* const sr = ipmiQuery(_sensor);
-  if (!sr || !sr->s_reading_valid || !sr->s_has_analog_value) {
-    mutex_.unlock();
-    _result.valid = false;
-    return false;
-  } // if
-
-  _result.value.fval = sr->s_a_val;
-  _result.rval = sr->s_reading;
-  mutex_.unlock();
-  _result.valid = true;
-  return true;
-} // Device::aiQuery
 
 
 void Device::mbbiDirectCallback(::CALLBACK* _cb) {
@@ -115,7 +55,7 @@ void Device::mbbiDirectCallback(::CALLBACK* _cb) {
   callbackGetUser(vpriv, _cb);
   callback_private_t* priv = static_cast<callback_private_t*>(vpriv);
 
-  result_t result = priv->thread->findResult(sensor_id_t(priv->sensor));
+  result_t result = priv->thread->findResult(sensorcmd_id_t(priv->sensor));
   if (result.valid == false) {
     dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
     // update the record
@@ -126,7 +66,7 @@ void Device::mbbiDirectCallback(::CALLBACK* _cb) {
 
     if (*priv->good) {
        *priv->good = false;
-      SuS_LOG_PRINTF(warning, log_id(), "sensor 0x%02x/0x%02x: Read invalid.", priv->sensor.ipmb, priv->sensor.sensor);
+      SuS_LOG_STREAM(warning, log_id(), "sensor: command failed. " << priv->sensor.prettyPrint());
     } // if
 
     return;
@@ -144,35 +84,17 @@ void Device::mbbiDirectCallback(::CALLBACK* _cb) {
   dbScanUnlock((dbCommon*)priv->rec);
   if (!*priv->good) {
      *priv->good = true;
-     SuS_LOG_PRINTF(info, log_id(), "sensor 0x%02x/0x%02x: Read valid again.", priv->sensor.ipmb, priv->sensor.sensor);
+     SuS_LOG_STREAM(info, log_id(), "sensor: Read valid again. " << priv->sensor.prettyPrint());
   } // if
 } // Device::mbbiDirectCallback
 
 
-bool Device::mbbiDirectQuery(const sensor_id_t& _sensor, result_t& _result) {
-  mutex_.lock();
-
-  const ::sensor_reading* const sr = ipmiQuery(_sensor);
-  if (!sr || !sr->s_reading_valid || sr->s_has_analog_value) {
-    mutex_.unlock();
-    _result.valid = false;
-    return false;
-  } // if
-
-  _result.value.ival = sr->s_reading;
-  _result.rval = ((sr->s_data3 & 0x7FU) << 8) | sr->s_data2;
-  mutex_.unlock();
-  _result.valid = true;
-  return true;
-} // Device::mbbiDirectQuery
-
-
-void Device::mbbiCallback(::CALLBACK* _cb) {
+void Device::mbboDirectCallback(::CALLBACK* _cb) {
   void* vpriv;
   callbackGetUser(vpriv, _cb);
   callback_private_t* priv = static_cast<callback_private_t*>(vpriv);
 
-  result_t result = priv->thread->findResult(sensor_id_t(priv->sensor));
+  result_t result = priv->thread->findResult(sensorcmd_id_t(priv->sensor));
   if (result.valid == false) {
     dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
     // update the record
@@ -183,7 +105,7 @@ void Device::mbbiCallback(::CALLBACK* _cb) {
 
     if (*priv->good) {
        *priv->good = false;
-      SuS_LOG_PRINTF(warning, log_id(), "sensor 0x%02x/0x%02x: Read invalid.", priv->sensor.ipmb, priv->sensor.sensor);
+      SuS_LOG_STREAM(warning, log_id(), "sensor: command failed. " << priv->sensor.prettyPrint());
     } // if
 
     return;
@@ -192,79 +114,228 @@ void Device::mbbiCallback(::CALLBACK* _cb) {
   dbScanLock((dbCommon*)priv->rec);
   // update the record
   priv->rec->udf = 0;
-  ::mbbiRecord* const mbbi = reinterpret_cast< ::mbbiRecord*>(priv->rec);
-//  mbbi->val = result.value.ival;
-  mbbi->rval = 0;
-  SuS_LOG_PRINTF(finest, log_id(), "%s data %04x reading %02x", priv->rec->name, result.rval, result.value.ival);
-  while(result.rval >>= 1) ++mbbi->rval;
+  ::mbboDirectRecord* const mbbo = reinterpret_cast< ::mbboDirectRecord*>(priv->rec);
+//  mbbo->val = result.value.ival;
+  mbbo->rval = result.rval;
+  mbbo->val = result.rval;
   typedef long(*real_signature)(dbCommon*);
   (*reinterpret_cast<real_signature>(priv->rec->rset->process))(reinterpret_cast<dbCommon*>(priv->rec));
   dbScanUnlock((dbCommon*)priv->rec);
   if (!*priv->good) {
      *priv->good = true;
-     SuS_LOG_PRINTF(info, log_id(), "sensor 0x%02x/0x%02x: Read valid again.", priv->sensor.ipmb, priv->sensor.sensor);
+     SuS_LOG_STREAM(info, log_id(), "sensor: Read valid again. " << priv->sensor.prettyPrint());
   } // if
-} // Device::mbbiCallback
+} // Device::mbboDirectCallback
 
 
-bool Device::mbbiQuery(const sensor_id_t& _sensor, result_t& _result) {
+void Device::boCallback(::CALLBACK* _cb) {
+//  SuS_LOG_STREAM(info, log_id(), "boCallback " <<  (unsigned long long)_cb);
+  std::cout << "boCallback " <<  (unsigned long long)_cb << std::endl;
+  void* vpriv;
+  callbackGetUser(vpriv, _cb);
+//   SuS_LOG_STREAM(info, log_id(), " " << (unsigned long long)vpriv);
+  callback_private_t* priv = static_cast<callback_private_t*>(vpriv);
+//   SuS_LOG_STREAM(info, log_id(), " " << (unsigned long long)priv << " " << (char *)&priv->sensor);
+
+//   SuS_LOG_STREAM(info, log_id(), "find result " << priv->sensor.prettyPrint());
+   std::cout << "find result " << priv->sensor.prettyPrint() << std::endl;
+  result_t result = priv->thread->findResult(sensorcmd_id_t(priv->sensor));
+  SuS_LOG_STREAM(info, log_id(), "result is " << result.valid << "\n");
+  if (result.valid == false) {
+    dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
+    // update the record
+    priv->rec->udf = 1;
+    typedef long(*real_signature)(dbCommon*);
+    (*reinterpret_cast<real_signature>(priv->rec->rset->process))(priv->rec);
+    dbScanUnlock(reinterpret_cast<dbCommon*>(priv->rec));
+
+    if (*priv->good) {
+       *priv->good = false;
+      SuS_LOG_STREAM(warning, log_id(), "sensor: command failed." << priv->sensor.prettyPrint());
+    } // if
+
+    SuS_LOG_STREAM(info, log_id(), "boCallback end 1\n");
+    return;
+  } // if
+
+  dbScanLock((dbCommon*)priv->rec);
+  // update the record
+  priv->rec->udf = 0;
+  ::boRecord* const bo = reinterpret_cast< ::boRecord*>(priv->rec);
+//  mbbo->val = result.value.ival;
+  bo->rval = result.rval;
+  bo->val = result.rval;
+  typedef long(*real_signature)(dbCommon*);
+  (*reinterpret_cast<real_signature>(priv->rec->rset->process))(reinterpret_cast<dbCommon*>(priv->rec));
+  dbScanUnlock((dbCommon*)priv->rec);
+  if (!*priv->good) {
+     *priv->good = true;
+     SuS_LOG_STREAM(info, log_id(), "sensor: Read valid again." << priv->sensor.prettyPrint());
+  } // if
+  SuS_LOG_STREAM(info, log_id(), "boCallback end 2\n");
+} // Device::boCallback
+
+bool Device::boQuery(const query_job_t& _sensor, result_t& _result) {
+  SuS_LOG_STREAM(info, log_id(), "boQuery\n");
   mutex_.lock();
 
-  const ::sensor_reading* const sr = ipmiQuery(_sensor);
-  if (!sr || !sr->s_reading_valid || sr->s_has_analog_value) {
+  //const ::sensor_reading* const 
+  query_result_t sr = ipmiQuery(_sensor);
+//   if (!sr || !sr->s_reading_valid || sr->s_has_analog_value) {
+  if(!sr.valid || sr.retval!=0){
+    mutex_.unlock();
+    _result.valid = false;
+    SuS_LOG_STREAM(info, log_id(), "boQuery false\n");
+    return false;
+  } // if
+
+  _result.value.ival = 0;//sr->s_reading;
+  _result.rval = 0;//((sr->s_data3 & 0x7FU) << 8) | sr->s_data2;
+  mutex_.unlock();
+  _result.valid = true;
+  SuS_LOG_STREAM(info, log_id(), "boQuery true\n");
+  return true;
+} // Device::boQuery
+
+
+bool Device::mbboDirectQuery(const query_job_t& _sensor, result_t& _result) {
+  mutex_.lock();
+
+//   const ::sensor_reading* const 
+  query_result_t sr = ipmiQuery(_sensor);
+//   if (!sr || !sr->s_reading_valid || sr->s_has_analog_value) {
+  if(!sr.valid || sr.retval!=0){
     mutex_.unlock();
     _result.valid = false;
     return false;
   } // if
 
-  _result.value.ival = sr->s_reading;
-  _result.rval = ((sr->s_data3 & 0x7FU) << 8) | sr->s_data2;
+  _result.value.ival = 0;//sr->s_reading;
+  _result.rval = 0;//((sr->s_data3 & 0x7FU) << 8) | sr->s_data2;
   mutex_.unlock();
   _result.valid = true;
   return true;
-} // Device::mbbiQuery
+} // Device::mbboDirectQuery
 
 
-const ::sensor_reading* Device::ipmiQuery(const sensor_id_t& _sensor) {
-  sensor_list_t::const_iterator i = sensors_.find(_sensor);
-  if (i == sensors_.end()) {
-    SuS_LOG_PRINTF(warning, log_id(), "sensor %s not found.", _sensor.prettyPrint().c_str());
-    return nullptr;
+bool Device::mbbiDirectQuery(const query_job_t& _sensor, result_t& _result) {
+  mutex_.lock();
+
+//   const ::sensor_reading* const 
+  query_result_t sr = ipmiQuery(_sensor);
+//   if (!sr || !sr->s_reading_valid || sr->s_has_analog_value) {
+  if(!sr.valid || sr.retval!=0){
+    mutex_.unlock();
+    _result.valid = false;
+    return false;
+  } // if
+
+  unsigned long long a=0;
+  for(int i=7; i>=0; i--){
+    a<<=8;
+    if( i<sr.len) a|=sr.data[i];
+  }
+  printf("==$%llX==\n",a);
+  _result.value.ival = a;//sr->s_reading;
+  _result.rval = a;//((sr->s_data3 & 0x7FU) << 8) | sr->s_data2;
+  mutex_.unlock();
+  _result.valid = true;
+  return true;
+} // Device::mbbiDirectQuery
+
+
+// const ::sensor_reading*
+query_result_t Device::ipmiQuery(const query_job_t& _sensor) {
+  // SuS_LOG_STREAM(info, log_id(), "ipmiQuery\n");
+  sensor_list_t::const_iterator it = sensors_.find(_sensor.sensor);
+  if (it == sensors_.end()) {
+     SuS_LOG_PRINTF(warning, log_id(), "sensor %s not found.", _sensor.sensor.prettyPrint().c_str());
+     return query_result_t();
   }
 
-  intf_->target_addr = _sensor.ipmb;
-  // returns a pointer to an internal variable
-  const ::sensor_reading* const sr = ::ipmi_sdr_read_sensor_value(intf_,
-                                     i->second.common,
-                                     i->second.type, 2 /* precision */);
-  return sr;
-}
-
-
-bool Device::check_PICMG() {
-  // from ipmitool, ipmi_main.c
+  // from ipmitool
   ::ipmi_rq req;
-  bool version_accepted = false;
+  uint8_t msg_data[16];// unclear what max size could be
+  memset(msg_data, 0, sizeof(msg_data));
 
-  memset(&req, 0, sizeof(req));
-  req.msg.netfn = IPMI_NETFN_PICMG;
-  req.msg.cmd = PICMG_GET_PICMG_PROPERTIES_CMD;
-  uint8_t msg_data = 0x00;
-  req.msg.data = &msg_data;
-  req.msg.data_len = 1;
-  msg_data = 0;
-
-  intf_->target_addr = local_addr_;
-  const ::ipmi_rs* const rsp = intf_->sendrecv(intf_, &req);
-  if (rsp && !rsp->ccode) {
-    if ((rsp->data[0] == 0) &&
-        ((rsp->data[1] & 0x0F) == PICMG_ATCA_MAJOR_VERSION)) {
-      version_accepted = true;
-    }
+  intf_->target_addr = _sensor.sensor.ipmb;
+  if(_sensor.sensor.ipmb_tunnel!=0) intf_->target_channel=7;
+/*  intf_->target_channel = 0;
+  intf_->transit_addr = 0;
+  intf_->transit_channel = 0;
+  intf_->my_addr = 0; //IPMI_BMC_SLAVE_ADDR;
+  if(_sensor.ipmb_tunnel!=0){
+    intf_->target_channel = 7;
+    intf_->transit_addr = _sensor.ipmb_tunnel;
+    intf_->transit_channel = 0;
+    intf_->my_addr = 0x20;
   }
-  SuS_LOG_STREAM(fine, log_id(), "PICMG " << (version_accepted ? "" : "not ") << "detected.");
-  return version_accepted;
-} // Device::check_PICMG
+
+  printf("= send query -t 0x%X -b %d -T 0x%X -B %d -m 0x%X \n",
+    intf_->target_addr,
+    intf_->target_channel,
+    intf_->transit_addr,
+    intf_->transit_channel,
+    intf_->my_addr
+  );*/
+  
+  int np=0;
+  unsigned int netf=0, cmd=0;
+  np=sscanf(_sensor.sensor.command.c_str(),"%d %d %hhd %hhd %hhd %hhd %hhd %hhd %hhd %hhd %hhd %hhd %hhd %hhd %hhd %hhd",
+    &netf, &cmd, &msg_data[0], &msg_data[1], &msg_data[2], &msg_data[3], &msg_data[4], &msg_data[5],
+    &msg_data[6], &msg_data[7], &msg_data[8], &msg_data[9], &msg_data[10], &msg_data[11], &msg_data[12], &msg_data[13]);
+  
+  printf("<%d> NETF $%X CMD $%X DATA $%X $%X $%X $%X $%X $%X $%X $%X $%X $%X $%X $%X $%X $%X\n", np,
+    netf, cmd, msg_data[0], msg_data[1], msg_data[2], msg_data[3], msg_data[4], msg_data[5],
+    msg_data[6], msg_data[7], msg_data[8], msg_data[9], msg_data[10], msg_data[11], msg_data[12], msg_data[13]);
+
+
+  if(np<2){
+    printf("sensor command parameters not valid!\n");
+    return query_result_t();
+  }
+  np-=2;
+  memset(&req, 0, sizeof(req));
+  req.msg.netfn = netf;
+  req.msg.cmd = cmd;
+  req.msg.data = msg_data;
+  req.msg.data_len = np+_sensor.sensor.param;
+  if(_sensor.sensor.param>0){
+    printf("(((extra param %d %d: ",(int)_sensor.sensor.param,_sensor.result.len);
+      for(int i=0; i< std::min((int)_sensor.sensor.param,_sensor.result.len); i++){
+      printf(" $%X ", _sensor.result.data[i]);
+      msg_data[np+i]=_sensor.result.data[i];
+    }
+    printf(")))\n");
+  }
+
+  const ::ipmi_rs* const rsp = intf_->sendrecv(intf_, &req);
+  intf_->target_addr = local_addr_;
+  intf_->target_channel=0;
+  if (!rsp){
+    printf("return (no rsp)\n");
+    return query_result_t();
+  }
+  printf("return code $%X\n",rsp->ccode);
+  if (rsp->ccode){
+    return query_result_t();
+  }
+
+  printf("--- Values $%02X: ",rsp->ccode);
+  for(int i=0; i< rsp->data_len; i++){
+    printf(" $%02X",rsp->data[i]);
+  }
+  printf("\n-----------");
+
+  query_result_t r;
+  r.retval=rsp->ccode;
+  r.len=std::min((int) sizeof(query_result_t::data), rsp->data_len);
+  for(int i=0; i< r.len; i++) r.data[i]=rsp->data[i];
+  r.valid=true;
+
+  intf_->target_addr = _sensor.sensor.ipmb; // wozu?
+  return r;
+}
 
 
 bool Device::connect(const std::string& _hostname, const std::string& _username,
@@ -300,173 +371,18 @@ bool Device::connect(const std::string& _hostname, const std::string& _username,
 } // Device::connect
 
 
-void Device::detectSensors() {
-  if (!intf_) {
-    SuS_LOG(warning, log_id(), "Not scanning: not connected.");
-    return;
-  }
-  sensors_.clear();
-  iterateSDRs(local_addr_);
-  if (sensors_.size() == 0) iterateSDRs(local_addr_, true);
-  find_ipmb();
-  for (std::set<slave_addr_t>::const_iterator i = slaves_.begin(); i != slaves_.end();
-       ++i) iterateSDRs(*i);
-
-  SuS_LOG_STREAM(fine, log_id(), "Total sensor count: " << sensors_.size());
-
-  for (sensor_list_t::iterator i = sensors_.begin();
-       i != sensors_.end(); ++i) {
-    std::stringstream ss;
-    ss << "sensor 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.ipmb
-       << "/0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.sensor;
-    switch (i->second.type) {
-      case SDR_RECORD_TYPE_FULL_SENSOR:
-        ss << " : full '" << i->second.full->id_string
-                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->event_type
-                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->sensor.type;
-        break;
-      case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        ss << " : compact '" << i->second.compact->id_string
-                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->event_type
-                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->sensor.type;
-        break;
-      default:
-        ss << " : unexpected type 0x" << std::hex << +i->second.type;
-    }
-    if (i->second.common->sensor.type <= SENSOR_TYPE_MAX)
-      ss << " (" << ::sensor_type_desc[i->second.common->sensor.type] << ")";
-    ss << "." << std::ends;
-
-    SuS_LOG(finer, log_id(), ss.str());
-  } // for i
-} // Device::detectSensors
-
-
-void Device::dumpDatabase(const std::string& _file) {
-  if (!intf_) {
-    SuS_LOG(warning, log_id(), "Not connected.");
-    return;
-  }
-
-  std::ofstream of(_file);
-  if(!of.is_open()) {
-    SuS_LOG_STREAM(warning, log_id(), "Cannot open '" << _file << "' for writing.");
-    return;
-  }
-
-  of << "# This file has been automatically created." << std::endl
-          << "# It is not expected to work as-is." << std::endl
-          << "# Please update the PV names and add SCAN fields as required." << std::endl;
-
-  for (const auto& sensor : sensors_) {
-    std::string name;
-    switch (sensor.second.type) {
-      case SDR_RECORD_TYPE_FULL_SENSOR:
-        name = reinterpret_cast<const char*>(sensor.second.full->id_string);
-        break;
-      case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        name = reinterpret_cast<const char*>(sensor.second.compact->id_string);
-        break;
-      default:
-        std::stringstream ss;
-        ss << "unexpected type 0x" << std::hex << +sensor.second.type;
-        name = ss.str();
-    }
-
-    std::string pvname(name);
-    std::replace( pvname.begin(), pvname.end(), '.', '_');
-    std::replace( pvname.begin(), pvname.end(), ' ', '_');
-
-    // take a reading to check the return value type.
-    const ::sensor_reading* const sr { ipmiQuery(sensor.first) };
-    const std::string rectype { sr->s_has_analog_value ? "ai" : "mbbi" };
-    of << std::endl
-            << "# " << name
-            << ", event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor.second.common->event_type
-            << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor.second.common->sensor.type;
-    if (sensor.second.common->sensor.type <= SENSOR_TYPE_MAX)
-      of << " (" << ::sensor_type_desc[sensor.second.common->sensor.type] << ")";
-
-    of << std::endl
-            << "record(" << rectype << ", \"" << pvname << "\")" << std::endl
-            << "{" << std::endl
-            << "   field(DTYP, \"ipmitool\")" << std::endl << std::dec
-            << "   field(INP,  \"#L" << +id_ << " A" << +sensor.first.ipmb
-            << " C" << +sensor.first.entity << " S" << +sensor.first.instance <<" @"<< name <<"\")" << std::endl
-            << "}" << std::endl;
-  } // for sensor
- 
-  if (!of.good()) {
-    SuS_LOG(warning, log_id(), "Write failed.");
-  }
-  of.close();
-} // Device::dumpDatabase
-
-
-void Device::find_ipmb() {
-  if (!check_PICMG()) return;
-
-  // from ipmitool
-  ::ipmi_rq req;
-  uint8_t msg_data[5];
-
-  memset(&req, 0, sizeof(req));
-  req.msg.netfn = IPMI_NETFN_PICMG;
-  req.msg.cmd = PICMG_GET_ADDRESS_INFO_CMD;
-  req.msg.data = msg_data;
-  req.msg.data_len = 2;
-  msg_data[0] = 0;   /* picmg identifier */
-  msg_data[1] = 0;   /* default fru id */
-
-  const ::ipmi_rs* const rsp = intf_->sendrecv(intf_, &req);
-  if (!rsp) return;
-  else if (rsp->ccode) return;
-
-  slaves_.insert(rsp->data[2]);
-} // Device::find_ipmb
-
-
-void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec) {
-  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num, _rec->cmn.entity.id,  _rec->cmn.entity.instance, reinterpret_cast<char *>(_rec->id_string));
-  any_sensor_ptr any;
-  any.type = SDR_RECORD_TYPE_FULL_SENSOR;
-  any.full = _rec;
-  sensors_[ id ] = any;
-  std::stringstream ss;
-  ss << "  found full " << id.prettyPrint()
-     << " (0x" << std::hex << std::setw(2) << std::setfill('0') << +_rec->cmn.sensor.type;
-  if (_rec->cmn.sensor.type <= SENSOR_TYPE_MAX)
-    ss << " => " << ::sensor_type_desc[_rec->cmn.sensor.type];
-  ss << ")." << std::ends;
-  SuS_LOG(finest, log_id(), ss.str());
-} // Device::handleFullSensor
-
-
-void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor* _rec) {
-  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num, _rec->cmn.entity.id,  _rec->cmn.entity.instance, reinterpret_cast<char *>(_rec->id_string));
-  any_sensor_ptr any;
-  any.type = SDR_RECORD_TYPE_COMPACT_SENSOR;
-  any.compact = _rec;
-  sensors_.emplace(id, any);
-  std::stringstream ss;
-  ss << "  found compact " << id.prettyPrint()
-     << " (0x" << std::hex << std::setw(2) << std::setfill('0') << +_rec->cmn.sensor.type;
-  if (_rec->cmn.sensor.type <= SENSOR_TYPE_MAX)
-    ss << " => " << ::sensor_type_desc[_rec->cmn.sensor.type];
-  ss << ")." << std::ends;
-  SuS_LOG(finest, log_id(), ss.str());
-} // Device::handleCompactSensor
-
-
-Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _inp) {
-  sensor_id_t id(_inp);
+// initInputRecord is same...
+Device::any_sensor_ptr Device::initOutputRecord(::dbCommon* _rec, const ::link& _out) {
+  sensorcmd_id_t id(_out);
   sensor_list_t::iterator i = sensors_.find(id);
   if (i == sensors_.end()) {
     SuS_LOG_PRINTF(warning, log_id(), "sensor %s not found.", id.prettyPrint().c_str());
-    return any_sensor_ptr();
+    //return any_sensor_ptr();
+    sensors_[id] = any_sensor_ptr();
+    i = sensors_.find(id);
+    if (i == sensors_.end()) return any_sensor_ptr(); 
   } // if
   // id doesn't know its sensor number, but the cached version should.
-  assert(i->first.sensor_set);
 
   dpvt_t* priv = new dpvt_t;
   callbackSetPriority(priorityLow, &priv->cb);
@@ -476,186 +392,29 @@ Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _
   priv->cb.timer = NULL;
   _rec->dpvt = priv;
 
-  if (strlen(_rec->desc) == 0) {
-    switch (i->second.type) {
-      case SDR_RECORD_TYPE_FULL_SENSOR:
-        strncpy(_rec->desc, reinterpret_cast<const char*>(i->second.full->id_string), 40);
-        break;
-      case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        strncpy(_rec->desc, reinterpret_cast<const char*>(i->second.compact->id_string), 40);
-        break;
-      default:
-        std::cerr << "Unexpected type 0x" << std::hex << +i->second.common->sensor.type << std::endl;
-    }
-    _rec->desc[40] = '\0';
-  } // if
   return i->second;
 }
 
-void Device::initAiRecord(::aiRecord* _pai) {
-  auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pai), _pai->inp);
-  callbackSetCallback(aiCallback, &static_cast<dpvt_t*>(_pai->dpvt)->cb);
 
-  SuS_LOG_STREAM(finest, log_id(), "SENSOR " << +_pai->inp.value.abio.card);
-  SuS_LOG_STREAM(finest, log_id(), "  THRESH "
-                 << +i.common->mask.type.threshold.read.unr << " "
-                 << +i.common->mask.type.threshold.read.ucr << " "
-                 << +i.common->mask.type.threshold.read.unc << " "
-                 << +i.common->mask.type.threshold.read.lnr << " "
-                 << +i.common->mask.type.threshold.read.lcr << " "
-                 << +i.common->mask.type.threshold.read.lnc);
-  SuS_LOG_STREAM(finest, log_id(), "  HYSTERESIS "
-                 << +i.common->sensor.capabilities.hysteresis);
-  if (i.type == SDR_RECORD_TYPE_FULL_SENSOR) {
-    SuS_LOG_STREAM(finest, log_id(), "  LINEAR " << +i.full->linearization);
-  }
-
-  // TODO: for compact sensor
-  if (i.type == SDR_RECORD_TYPE_FULL_SENSOR) {
-    ::sdr_record_full_sensor* const sdr = i.full;
-    // swap for 1/x conversions, cf. section 36.5 of IPMI specification
-    bool swap_hi_lo = (sdr->linearization == SDR_SENSOR_L_1_X);
-
-    if (swap_hi_lo) {
-      _pai->lopr = ::sdr_convert_sensor_reading(sdr, sdr->sensor_max);
-      _pai->hopr = ::sdr_convert_sensor_reading(sdr, sdr->sensor_min);
-    } else {
-      _pai->hopr = ::sdr_convert_sensor_reading(sdr, sdr->sensor_max);
-      _pai->lopr = ::sdr_convert_sensor_reading(sdr, sdr->sensor_min);
-    } // else
-
-    if (sdr->cmn.mask.type.threshold.read.ucr) {
-      if (swap_hi_lo) {
-        _pai->lolo = ::sdr_convert_sensor_reading(sdr, sdr->threshold.upper.critical);
-        _pai->llsv = ::epicsSevMajor;
-      } else {
-        _pai->hihi = ::sdr_convert_sensor_reading(sdr, sdr->threshold.upper.critical);
-        _pai->hhsv = ::epicsSevMajor;
-      } // else
-    } // if
-    if (sdr->cmn.mask.type.threshold.read.lcr) {
-      if (swap_hi_lo) {
-        _pai->hihi = ::sdr_convert_sensor_reading(sdr, sdr->threshold.lower.critical);
-        _pai->hhsv = ::epicsSevMajor;
-      } else {
-        _pai->lolo = ::sdr_convert_sensor_reading(sdr, sdr->threshold.lower.critical);
-        _pai->llsv = ::epicsSevMajor;
-      } // else
-    } // if
-
-    if (sdr->cmn.mask.type.threshold.read.unc) {
-      if (swap_hi_lo) {
-        _pai->low = ::sdr_convert_sensor_reading(sdr, sdr->threshold.upper.non_critical);
-        _pai->lsv = ::epicsSevMinor;
-      } else {
-        _pai->high = ::sdr_convert_sensor_reading(sdr, sdr->threshold.upper.non_critical);
-        _pai->hsv = ::epicsSevMinor;
-      } // else
-    } // if
-    if (sdr->cmn.mask.type.threshold.read.lnc) {
-      if (swap_hi_lo) {
-        _pai->high = ::sdr_convert_sensor_reading(sdr, sdr->threshold.lower.non_critical);
-        _pai->hsv = ::epicsSevMinor;
-      } else {
-        _pai->low = ::sdr_convert_sensor_reading(sdr, sdr->threshold.lower.non_critical);
-        _pai->lsv = ::epicsSevMinor;
-      } // else
-    } // if
-
-    // hysteresis is given in raw values. converting to a fixed value only makes
-    // sense for linear conversions.
-    if (+sdr->linearization == SDR_SENSOR_L_LINEAR) {
-      if ((sdr->cmn.sensor.capabilities.hysteresis == 1)
-          || (sdr->cmn.sensor.capabilities.hysteresis == 2)) {
-        uint8_t hyst = std::min(sdr->threshold.hysteresis.positive, sdr->threshold.hysteresis.negative);
-        _pai->hyst = ::sdr_convert_sensor_hysterisis(sdr, hyst);
-      } // if
-    } // if
-  }
-} // Device::initAiRecord
+void Device::initMbboDirectRecord(::mbboDirectRecord* _pmbbo) {
+  auto i = initOutputRecord(reinterpret_cast< ::dbCommon*>(_pmbbo), _pmbbo->out);
+  callbackSetCallback(mbboDirectCallback, &static_cast<dpvt_t*>(_pmbbo->dpvt)->cb);
+} // Device::initMbboDirectRecord
 
 
 void Device::initMbbiDirectRecord(::mbbiDirectRecord* _pmbbi) {
-  auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
+  auto i = initOutputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
   callbackSetCallback(mbbiDirectCallback, &static_cast<dpvt_t*>(_pmbbi->dpvt)->cb);
 } // Device::initMbbiDirectRecord
 
 
-void Device::initMbbiRecord(::mbbiRecord* _pmbbi) {
-  auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
-  callbackSetCallback(mbbiCallback, &static_cast<dpvt_t*>(_pmbbi->dpvt)->cb);
-
-  static const std::array<epicsUInt32 mbbiRecord::*, 16> mbbiValues = {
-    &mbbiRecord::zrvl, &mbbiRecord::onvl, &mbbiRecord::twvl, &mbbiRecord::thvl,
-    &mbbiRecord::frvl, &mbbiRecord::fvvl, &mbbiRecord::sxvl, &mbbiRecord::svvl,
-    &mbbiRecord::eivl, &mbbiRecord::nivl, &mbbiRecord::tevl, &mbbiRecord::elvl,
-    &mbbiRecord::tvvl, &mbbiRecord::ttvl, &mbbiRecord::ftvl, &mbbiRecord::ffvl
-  };
-
-  static const std::array<char (mbbiRecord::*)[26], 16> mbbiStrings = {
-    &mbbiRecord::zrst, &mbbiRecord::onst, &mbbiRecord::twst, &mbbiRecord::thst,
-    &mbbiRecord::frst, &mbbiRecord::fvst, &mbbiRecord::sxst, &mbbiRecord::svst,
-    &mbbiRecord::eist, &mbbiRecord::nist, &mbbiRecord::test, &mbbiRecord::elst,
-    &mbbiRecord::tvst, &mbbiRecord::ttst, &mbbiRecord::ftst, &mbbiRecord::ffst
-  };
-
-  struct ipmi_event_sensor_types *evt;
-  uint8_t typ;
-  if (i.common->event_type == 0x6f) {
-    evt = sensor_specific_types;
-    typ = i.common->sensor.type;
-  } else {
-    evt = generic_event_types;
-    typ = i.common->event_type;
-  }
-
-  for (; evt->type != NULL; evt++) {
-    if ((evt->code != typ) || (evt->data != 0xFF))
-    {
-      continue;
-    }
-
-    _pmbbi->*mbbiValues[evt->offset] = evt->offset;
-    strncpy(_pmbbi->*mbbiStrings[evt->offset], evt->desc, 26);
-    (_pmbbi->*mbbiStrings[evt->offset])[25] = '\0';
-  }
-} // Device::initMbbiRecord
-
-
-void Device::iterateSDRs(slave_addr_t _addr, bool _force_internal) {
-  SuS_LOG_STREAM(finest, log_id(), "iterating @0x" << std::hex << +_addr << (_force_internal ? ", internal." : "."));
-  intf_->target_addr = _addr;
-
-  ::ipmi_sdr_iterator* itr = ::ipmi_sdr_start(intf_, _force_internal ? 1 : 0);
-  if (!itr) return;
-
-  unsigned found = 0;
-  while (::sdr_get_rs* header = ::ipmi_sdr_get_next_header(intf_, itr)) {
-    uint8_t* const rec = ::ipmi_sdr_get_record(intf_, header, itr);
-    if (rec == NULL) {
-      // TODO
-      continue;
-    } // if
-
-    ++found;
-    switch (header->type) {
-      case SDR_RECORD_TYPE_FULL_SENSOR:
-        handleFullSensor(_addr, reinterpret_cast< ::sdr_record_full_sensor*>(rec));
-        break;
-      case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        handleCompactSensor(_addr, reinterpret_cast< ::sdr_record_compact_sensor*>(rec));
-        break;
-      case SDR_RECORD_TYPE_MC_DEVICE_LOCATOR:
-        slaves_.insert(reinterpret_cast< ::sdr_record_mc_locator*>(rec)->dev_slave_addr);
-        break;
-      default:
-        SuS_LOG_STREAM(finest, log_id(), "ignoring sensor type 0x" << std::hex << +header->type << ".");
-        break;
-    } // switch
-  } // while
-
-  SuS_LOG_STREAM(finer, log_id(), "found " << found << " sensors @0x" << std::hex << +_addr << (_force_internal ? ", internal." : "."));
-} // Device::iterateSDRs
+void Device::initBoRecord(::boRecord* _pmbbo) {
+//   printf("initBoRecord\n");
+  auto i = initOutputRecord(reinterpret_cast< ::dbCommon*>(_pmbbo), _pmbbo->out);
+//   printf("initBoRecord set callb\n");
+  callbackSetCallback(boCallback, &static_cast<dpvt_t*>(_pmbbo->dpvt)->cb);
+//   printf("initBoRecord done\n");
+} // Device::initBoRecord
 
 
 bool Device::ping() {
@@ -669,24 +428,59 @@ bool Device::ping() {
 } // Device::ping
 
 
-bool Device::readAiSensor(::aiRecord* _pai) {
-  if (!_pai->dpvt) {
+bool Device::writeBoSensor(::boRecord* _pmbbo) {
+//   SuS_LOG_STREAM(info, log_id(), "writeBoSensor\n");
+  if (!_pmbbo->dpvt) {
+//     SuS_LOG_STREAM(info, log_id(), "!_pmbbo->dpvt\n");
     // when dpvt is not set, init failed
-    _pai->udf = 1;
+    _pmbbo->udf = 1;
     return false;
   } // if
-  if (!_pai->pact) {
-    _pai->pact = TRUE;
-    readerThread_->enqueueSensorRead(query_job_t(_pai->inp, &Device::aiQuery));
-    dpvt_t* priv = static_cast<dpvt_t*>(_pai->dpvt);
-    ::callbackRequestDelayed(&priv->cb, 10.0);
+  if (!_pmbbo->pact) {
+//     SuS_LOG_STREAM(info, log_id(), "!_pmbbo->pact\n");
+    _pmbbo->pact = TRUE;
+    readerThread_->enqueueSensorRead(query_job_t(_pmbbo->out, &Device::boQuery));
+    dpvt_t* priv = static_cast<dpvt_t*>(_pmbbo->dpvt);
+    ::callbackRequestDelayed(&priv->cb, 2.0);
     return true;
     // start async. operation
   } else {
-    _pai->pact = FALSE;
+//     SuS_LOG_STREAM(info, log_id(), "_pmbbo->pact\n");
+    _pmbbo->pact = FALSE;
     return true;
   } // else
-} // Device::readAiSensor
+} // Device::writeBoSensor
+
+
+bool Device::writeMbboDirectSensor(::mbboDirectRecord* _pmbbo) {
+  if (!_pmbbo->dpvt) {
+    // when dpvt is not set, init failed
+    _pmbbo->udf = 1;
+    return false;
+  } // if
+  if (!_pmbbo->pact) {
+    _pmbbo->pact = TRUE;
+    query_job_t q(_pmbbo->out, &Device::mbboDirectQuery);
+    {
+      unsigned int v=_pmbbo->val;
+      printf("<<write : $%X $%X $%X $%X $%X>>\n",(unsigned int)_pmbbo->val,_pmbbo->rval,_pmbbo->oraw,_pmbbo->rbv,_pmbbo->orbv);
+
+      for(int i=0; i<q.sensor.param; i++){
+        q.result.data[i]=v & 0xFF;
+        v>>=8;
+      }
+      q.result.len=q.sensor.param;
+    }
+    readerThread_->enqueueSensorRead(q);
+    dpvt_t* priv = static_cast<dpvt_t*>(_pmbbo->dpvt);
+    ::callbackRequestDelayed(&priv->cb, 2.0);
+    return true;
+    // start async. operation
+  } else {
+    _pmbbo->pact = FALSE;
+    return true;
+  } // else
+} // Device::writeMbboDirectSensor
 
 
 bool Device::readMbbiDirectSensor(::mbbiDirectRecord* _pmbbi) {
@@ -699,7 +493,7 @@ bool Device::readMbbiDirectSensor(::mbbiDirectRecord* _pmbbi) {
     _pmbbi->pact = TRUE;
     readerThread_->enqueueSensorRead(query_job_t(_pmbbi->inp, &Device::mbbiDirectQuery));
     dpvt_t* priv = static_cast<dpvt_t*>(_pmbbi->dpvt);
-    ::callbackRequestDelayed(&priv->cb, 10.0);
+    ::callbackRequestDelayed(&priv->cb, 2.0);
     return true;
     // start async. operation
   } else {
@@ -709,29 +503,12 @@ bool Device::readMbbiDirectSensor(::mbbiDirectRecord* _pmbbi) {
 } // Device::readMbbiDirectSensor
 
 
-bool Device::readMbbiSensor(::mbbiRecord* _pmbbi) {
-  if (!_pmbbi->dpvt) {
-    // when dpvt is not set, init failed
-    _pmbbi->udf = 1;
-    return false;
-  } // if
-  if (!_pmbbi->pact) {
-    _pmbbi->pact = TRUE;
-    readerThread_->enqueueSensorRead(query_job_t(_pmbbi->inp, &Device::mbbiQuery));
-    dpvt_t* priv = static_cast<dpvt_t*>(_pmbbi->dpvt);
-    ::callbackRequestDelayed(&priv->cb, 10.0);
-    return true;
-    // start async. operation
-  } else {
-    _pmbbi->pact = FALSE;
-    return true;
-  } // else
-} // Device::readMbbiSensor
-
+Device::query_job_t::query_job_t(const ::link& _loc, query_func_t _f,query_result_t r)
+  : sensor(_loc), query_func(_f), result( r) {
+} // Device::query_job_t constructor
 
 Device::query_job_t::query_job_t(const ::link& _loc, query_func_t _f)
-  : sensor(_loc), query_func(_f) {
+  : sensor(_loc), query_func(_f), result() {
 } // Device::query_job_t constructor
 
 } // namespace IPMIIOC
-

@@ -6,7 +6,7 @@ include $(TOP)/configure/CONFIG
 
 LIBRARY_IOC += ipmitool
 
-DBD += ipmitool.dbd
+DBD += ipmicmd.dbd
 ipmitool_DBD += Logfile.dbd
 
 ipmitool_SRCS += epics_device.c

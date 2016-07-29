@@ -1,7 +1,0 @@
-# include "base.dbd"
-# local menu, record, device, driver, breakpoint definitions
-device(ai,AB_IO,devIpmitoolAi,"ipmitool")
-device(mbbi,AB_IO,devIpmitoolMbbi,"ipmitool")
-device(mbbiDirect,AB_IO,devIpmitoolMbbiDirect,"ipmitool")
-
-registrar(ipmiRegisterCommands)

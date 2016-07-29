@@ -1,8 +1,7 @@
-#include <aiRecord.h>
+#include <boRecord.h>
 #include <devSup.h>
 #include <epicsExport.h>
-#include <mbbiRecord.h>
-#include <mbbiDirectRecord.h>
+#include <mbboDirectRecord.h>
 #include <stdlib.h>
 
 #include <stdio.h>
@@ -13,23 +12,23 @@ static long init(int after) {
    return 0;
 }
 
-static long read_ai_record(aiRecord* _pai) {
-   ipmiReadAiSensor(_pai);
-   return 2;
-}
-
-static long init_ai_record(aiRecord* _pai) {
-  ipmiInitAiRecord(_pai);
-  return 0;
-}
-
-static long read_mbbi_record(mbbiRecord* _pmbbi) {
-   ipmiReadMbbiSensor(_pmbbi);
+static long write_bo_record(boRecord* _pbo) {
+   ipmiWriteBoSensor(_pbo);
    return 0;
 }
 
-static long init_mbbi_record(mbbiRecord* _pmbbi) {
-  ipmiInitMbbiRecord(_pmbbi);
+static long init_bo_record(boRecord* _pbo) {
+  ipmiInitBoRecord(_pbo);
+  return 0;
+}
+
+static long write_mbboDirect_record(mbboDirectRecord* _pmbboDirect) {
+   ipmiWriteMbboDirectSensor(_pmbboDirect);
+   return 0;
+}
+
+static long init_mbboDirect_record(mbboDirectRecord* _pmbboDirect) {
+  ipmiInitMbboDirectRecord(_pmbboDirect);
   return 0;
 }
 
@@ -50,35 +49,36 @@ struct {
    DEVSUPFUN       init;
    DEVSUPFUN       init_record;
    DEVSUPFUN       get_ioint_info;
-   DEVSUPFUN       read_ai;
+   DEVSUPFUN       write_bo;
    DEVSUPFUN       special_linconv;
-} devIpmitoolAi = {
+} devIpmitoolBo = {
    6, // number
    NULL, // report
    init, // init
-   init_ai_record, // init_record
+   init_bo_record, // init_record
    NULL, // get_ioint_info
-   read_ai_record, // read_ai
+   write_bo_record, // read_ai
    NULL  // special_linconv
 };
-epicsExportAddress(dset,devIpmitoolAi);
+epicsExportAddress(dset,devIpmitoolBo);
 
 struct {
    long            number;
-   DEVSUPFUN       dev_report;
+   DEVSUPFUN       report;
    DEVSUPFUN       init;
    DEVSUPFUN       init_record;
    DEVSUPFUN       get_ioint_info;
-   DEVSUPFUN       read_mbbi;
-} devIpmitoolMbbi = {
+   DEVSUPFUN       write_mbbo;
+} devIpmitoolMbboDirect = {
    5, // number
    NULL, // dev_report
    init, // init
-   init_mbbi_record, // init_record
+   init_mbboDirect_record, // init_record
    NULL, // get_ioint_info
-   read_mbbi_record // read_mbbi
+   write_mbboDirect_record // write_mbbo
 };
-epicsExportAddress(dset,devIpmitoolMbbi);
+epicsExportAddress(dset,devIpmitoolMbboDirect);
+
 
 struct {
    long            number;
@@ -93,7 +93,7 @@ struct {
    init, // init
    init_mbbiDirect_record, // init_record
    NULL, // get_ioint_info
-   read_mbbiDirect_record // read_mbbi
+   read_mbbiDirect_record // read
 };
 epicsExportAddress(dset,devIpmitoolMbbiDirect);
 
