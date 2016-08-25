@@ -494,6 +494,7 @@ Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _
 
 void Device::initAiRecord(::aiRecord* _pai) {
   auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pai), _pai->inp);
+  if(_pai->dpvt==NULL) return;
   callbackSetCallback(aiCallback, &static_cast<dpvt_t*>(_pai->dpvt)->cb);
 
   SuS_LOG_STREAM(finest, log_id(), "SENSOR " << +_pai->inp.value.abio.card);
@@ -577,12 +578,14 @@ void Device::initAiRecord(::aiRecord* _pai) {
 
 void Device::initMbbiDirectRecord(::mbbiDirectRecord* _pmbbi) {
   auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
+  if(_pmbbi->dpvt==NULL) return;
   callbackSetCallback(mbbiDirectCallback, &static_cast<dpvt_t*>(_pmbbi->dpvt)->cb);
 } // Device::initMbbiDirectRecord
 
 
 void Device::initMbbiRecord(::mbbiRecord* _pmbbi) {
   auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
+  if(_pmbbi->dpvt==NULL) return;
   callbackSetCallback(mbbiCallback, &static_cast<dpvt_t*>(_pmbbi->dpvt)->cb);
 
   static const std::array<epicsUInt32 mbbiRecord::*, 16> mbbiValues = {
