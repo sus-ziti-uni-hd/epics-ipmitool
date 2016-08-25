@@ -599,17 +599,17 @@ void Device::initMbbiRecord(::mbbiRecord* _pmbbi) {
     &mbbiRecord::tvst, &mbbiRecord::ttst, &mbbiRecord::ftst, &mbbiRecord::ffst
   };
 
-  struct ipmi_event_sensor_types *evt;
+  const struct ipmi_event_sensor_types *evt;
   uint8_t typ;
   if (i.common->event_type == 0x6f) {
-    evt = sensor_specific_types;
+    evt = sensor_specific_event_types;
     typ = i.common->sensor.type;
   } else {
     evt = generic_event_types;
     typ = i.common->event_type;
   }
 
-  for (; evt->type != NULL; evt++) {
+  for (; evt->desc != NULL; evt++) {
     if ((evt->code != typ) || (evt->data != 0xFF))
     {
       continue;
