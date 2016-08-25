@@ -86,7 +86,7 @@ struct {
    DEVSUPFUN       init;
    DEVSUPFUN       init_record;
    DEVSUPFUN       get_ioint_info;
-   DEVSUPFUN       read_mbbi;
+   DEVSUPFUN       read_mbbidirect;
 } devIpmitoolMbbiDirect = {
    5, // number
    NULL, // dev_report
