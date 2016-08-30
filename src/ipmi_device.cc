@@ -3,6 +3,7 @@
 #include "ipmi_reader_thread.h"
 #include "ipmi_internal.h"
 
+#include <atomic>
 #include <iomanip>
 #include <iostream>
 #include <string.h>
@@ -35,6 +36,8 @@ extern "C" {
 
 namespace {
 SuS::logfile::subsystem_registrator log_id("IPMIDev");
+
+std::atomic<unsigned> nextid(0U);
 } // namespace
 
 
@@ -59,7 +62,7 @@ void Device::aiCallback(::CALLBACK* _cb) {
   callbackGetUser(vpriv, _cb);
   callback_private_t* priv = static_cast<callback_private_t*>(vpriv);
 
-  result_t result = priv->thread->findResult(sensor_id_t(priv->sensor));
+  result_t result = priv->thread->findResult(static_cast<dpvt_t*>(priv->rec->dpvt)->pvid);
   if (result.valid == false) {
     dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
     // update the record
@@ -115,7 +118,7 @@ void Device::mbbiDirectCallback(::CALLBACK* _cb) {
   callbackGetUser(vpriv, _cb);
   callback_private_t* priv = static_cast<callback_private_t*>(vpriv);
 
-  result_t result = priv->thread->findResult(sensor_id_t(priv->sensor));
+  result_t result = priv->thread->findResult(static_cast<dpvt_t*>(priv->rec->dpvt)->pvid);
   if (result.valid == false) {
     dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
     // update the record
@@ -172,7 +175,7 @@ void Device::mbbiCallback(::CALLBACK* _cb) {
   callbackGetUser(vpriv, _cb);
   callback_private_t* priv = static_cast<callback_private_t*>(vpriv);
 
-  result_t result = priv->thread->findResult(sensor_id_t(priv->sensor));
+  result_t result = priv->thread->findResult(static_cast<dpvt_t*>(priv->rec->dpvt)->pvid);
   if (result.valid == false) {
     dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
     // update the record
@@ -469,6 +472,7 @@ Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _
   assert(i->first.sensor_set);
 
   dpvt_t* priv = new dpvt_t;
+  priv->pvid = nextid++;
   callbackSetPriority(priorityLow, &priv->cb);
   callback_private_t* cb_priv = new callback_private_t(
     reinterpret_cast< ::dbCommon*>(_rec), i->first, readerThread_, &i->second.good);
@@ -680,8 +684,8 @@ bool Device::readAiSensor(::aiRecord* _pai) {
   } // if
   if (!_pai->pact) {
     _pai->pact = TRUE;
-    readerThread_->enqueueSensorRead(query_job_t(_pai->inp, &Device::aiQuery));
     dpvt_t* priv = static_cast<dpvt_t*>(_pai->dpvt);
+    readerThread_->enqueueSensorRead(query_job_t(_pai->inp, &Device::aiQuery, priv->pvid));
     ::callbackRequestDelayed(&priv->cb, 10.0);
     return true;
     // start async. operation
@@ -700,8 +704,8 @@ bool Device::readMbbiDirectSensor(::mbbiDirectRecord* _pmbbi) {
   } // if
   if (!_pmbbi->pact) {
     _pmbbi->pact = TRUE;
-    readerThread_->enqueueSensorRead(query_job_t(_pmbbi->inp, &Device::mbbiDirectQuery));
     dpvt_t* priv = static_cast<dpvt_t*>(_pmbbi->dpvt);
+    readerThread_->enqueueSensorRead(query_job_t(_pmbbi->inp, &Device::mbbiDirectQuery, priv->pvid));
     ::callbackRequestDelayed(&priv->cb, 10.0);
     return true;
     // start async. operation
@@ -720,8 +724,8 @@ bool Device::readMbbiSensor(::mbbiRecord* _pmbbi) {
   } // if
   if (!_pmbbi->pact) {
     _pmbbi->pact = TRUE;
-    readerThread_->enqueueSensorRead(query_job_t(_pmbbi->inp, &Device::mbbiQuery));
     dpvt_t* priv = static_cast<dpvt_t*>(_pmbbi->dpvt);
+    readerThread_->enqueueSensorRead(query_job_t(_pmbbi->inp, &Device::mbbiQuery, priv->pvid));
     ::callbackRequestDelayed(&priv->cb, 10.0);
     return true;
     // start async. operation
@@ -732,8 +736,8 @@ bool Device::readMbbiSensor(::mbbiRecord* _pmbbi) {
 } // Device::readMbbiSensor
 
 
-Device::query_job_t::query_job_t(const ::link& _loc, query_func_t _f)
-  : sensor(_loc), query_func(_f) {
+Device::query_job_t::query_job_t(const ::link& _loc, query_func_t _f, unsigned _pvid)
+  : sensor(_loc), query_func(_f), pvid(_pvid) {
 } // Device::query_job_t constructor
 
 } // namespace IPMIIOC

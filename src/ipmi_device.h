@@ -57,11 +57,13 @@ class Device {
 
     // description of a job queued for reading.
     // sensor id and function to call for it.
+    // also the id of the PV that owns the job.
     struct query_job_t {
       sensor_id_t sensor;
       query_func_t query_func;
+      unsigned pvid;
 
-      query_job_t(const ::link& _loc, query_func_t _f);
+      query_job_t(const ::link& _loc, query_func_t _f, unsigned _pvid);
     };
 
     void handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec);

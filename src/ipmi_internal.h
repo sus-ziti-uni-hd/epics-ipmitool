@@ -23,6 +23,7 @@ extern intf_map_t s_interfaces;
 /** Private record data stored in dpvt. */
 struct dpvt_t {
   CALLBACK cb;
+  unsigned pvid;
 }; // struct dpvt_t
 
 } // namespace IPMIIOC
