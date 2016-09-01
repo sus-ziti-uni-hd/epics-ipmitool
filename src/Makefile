@@ -23,7 +23,7 @@ ipmitool_LIBS += Logfile EPICSLog
 
 STATIC_LDLIBS += $(IPMITOOL)/lib/.libs/libipmitool.a
 STATIC_LDLIBS += $(IPMITOOL)/src/plugins/.libs/libintf.a
-LDFLAGS += -lssl
+LDFLAGS += -lssl -lcrypto
 
 USR_INCLUDES += -I $(IPMITOOL)/include
 USR_INCLUDES += -I $(IPMITOOL)/src/plugins/lan
