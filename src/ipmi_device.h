@@ -34,7 +34,7 @@ class Device {
     ~Device();
 
     bool connect(const std::string& _hostname, const std::string& _username,
-                 const std::string& _password, int _privlevel);
+                 const std::string& _password, const std::string& _proto, int _privlevel);
 
     void initAiRecord(::aiRecord* _rec);
     bool readAiSensor(::aiRecord* _rec);

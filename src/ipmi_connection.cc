@@ -35,12 +35,12 @@ IPMIIOC::Device* findDevice(const link& _inp) {
 extern "C" {
 
   void ipmiConnect(int _id, const char* _hostname, const char* _username,
-                   const char* _password, int _privlevel) {
+                   const char* _password, const char* _proto, int _privlevel) {
     ::log_init("ipmitool-ioc", 0, ::verbose);
 
     try {
       IPMIIOC::Device* d = new IPMIIOC::Device(_id);
-      d->connect(_hostname, _username, _password, _privlevel);
+      d->connect(_hostname, _username, _password, _proto, _privlevel);
       IPMIIOC::s_interfaces[_id] = d;
     } catch (std::bad_alloc& ba) {
       ::errlogSevPrintf(::errlogMajor, "Memory allocation error: %s\n", ba.what());

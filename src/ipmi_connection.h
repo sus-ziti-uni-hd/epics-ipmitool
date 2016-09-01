@@ -10,7 +10,7 @@ extern "C" {
 #include <mbbiRecord.h>
 
 void ipmiConnect(int _id, const char* _hostname, const char* _username,
-                 const char* _password, int _privlevel);
+                 const char* _password, const char* _proto, int _privlevel);
 
 void ipmiInitAiRecord(aiRecord* _rec);
 

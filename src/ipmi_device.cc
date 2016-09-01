@@ -45,6 +45,7 @@ namespace IPMIIOC {
 
 Device::Device(short _id) {
   id_ = _id;
+  readerThread_=NULL;
 }
 
 
@@ -261,21 +262,23 @@ bool Device::check_PICMG() {
   const ::ipmi_rs* const rsp = intf_->sendrecv(intf_, &req);
   if (rsp && !rsp->ccode) {
     if ((rsp->data[0] == 0) &&
-        ((rsp->data[1] & 0x0F) == PICMG_ATCA_MAJOR_VERSION)) {
+        ((rsp->data[1] & 0x0F) == PICMG_ATCA_MAJOR_VERSION ||
+        (rsp->data[1] & 0x0F) == PICMG_AMC_MAJOR_VERSION ||
+        (rsp->data[1] & 0x0F) == PICMG_UTCA_MAJOR_VERSION)) {
       version_accepted = true;
     }
   }
-  SuS_LOG_STREAM(fine, log_id(), "PICMG " << (version_accepted ? "" : "not ") << "detected.");
+  SuS_LOG_STREAM(fine, log_id(), "PICMG (" <<(int)(rsp->data[1] & 0x0F) <<"."<< (int)(rsp->data[1] & 0xF0)<<") " << (version_accepted ? "" : "not ") << "detected.");
   return version_accepted;
 } // Device::check_PICMG
 
 
 bool Device::connect(const std::string& _hostname, const std::string& _username,
-                     const std::string& _password, int _privlevel) {
+                     const std::string& _password, const std::string& _proto, int _privlevel) {
   SuS_LOG_STREAM(config, log_id(), "Connecting to '" << _hostname << "'.");
-  intf_ = ::ipmi_intf_load(const_cast<char*>("lan"));
+  intf_ = ::ipmi_intf_load(const_cast<char*>(_proto.c_str()));
   if (!intf_) {
-    SuS_LOG(severe, log_id(), "Cannot load lan interface.");
+    SuS_LOG(severe, log_id(), "Cannot load selected (lan/lanplus/...) interface.");
     return false;
   }
 
