@@ -579,6 +579,12 @@ void Device::initAiRecord(::aiRecord* _pai) {
         _pai->hyst = ::sdr_convert_sensor_hysterisis(sdr, hyst);
       } // if
     } // if
+
+    {// Units
+      const char *c=ipmi_sdr_get_unit_string(sdr->cmn.unit.pct,
+        sdr->cmn.unit.modifier, sdr->cmn.unit.type.base, sdr->cmn.unit.type.modifier);
+      if(c) strncpy(_pai->egu,c,sizeof(_pai->egu));
+    }
   }
 } // Device::initAiRecord
 
