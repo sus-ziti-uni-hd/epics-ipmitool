@@ -261,14 +261,16 @@ bool Device::check_PICMG() {
   intf_->target_addr = local_addr_;
   const ::ipmi_rs* const rsp = intf_->sendrecv(intf_, &req);
   if (rsp && !rsp->ccode) {
-    if ((rsp->data[0] == 0) &&
-        ((rsp->data[1] & 0x0F) == PICMG_ATCA_MAJOR_VERSION ||
+    if (rsp->data[0] == 0){
+      if(((rsp->data[1] & 0x0F) == PICMG_ATCA_MAJOR_VERSION ||
         (rsp->data[1] & 0x0F) == PICMG_AMC_MAJOR_VERSION ||
         (rsp->data[1] & 0x0F) == PICMG_UTCA_MAJOR_VERSION)) {
       version_accepted = true;
     }
+      SuS_LOG_STREAM(finer, log_id(), "PICMG " <<(int)(rsp->data[1] & 0x0F) <<"."<< (int)((rsp->data[1] & 0xF0)>>4)<<" detected.");
   }
-  SuS_LOG_STREAM(fine, log_id(), "PICMG (" <<(int)(rsp->data[1] & 0x0F) <<"."<< (int)(rsp->data[1] & 0xF0)<<") " << (version_accepted ? "" : "not ") << "detected.");
+  }
+  SuS_LOG_STREAM(finer, log_id(), "PICMG " << (version_accepted ? "" : "not ") << "accepted.");
   return version_accepted;
 } // Device::check_PICMG
 
