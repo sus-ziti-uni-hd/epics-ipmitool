@@ -327,13 +327,24 @@ void Device::detectSensors() {
     std::stringstream ss;
     ss << "sensor 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.ipmb
        << "/0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.sensor;
+      
+    char *name[17];// id_string does not need to be zero terminated... check length!
+    int idlen;// actually, we should convert it to ASCII first, if its bcdplus or 6 bit -- TODO
+    memset(name, 0 ,sizeof(name));
+      
     switch (i->second.type) {
       case SDR_RECORD_TYPE_FULL_SENSOR:
+        idlen = i->second.full->id_code & 0x1f;
+        idlen = idlen < sizeof(name) ? idlen : sizeof(name) - 1;
+        memcpy(name, i->second.full->id_string, idlen);
         ss << " : full '" << i->second.full->id_string
                 << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->event_type
                 << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->sensor.type;
         break;
       case SDR_RECORD_TYPE_COMPACT_SENSOR:
+        idlen = i->second.compact->id_code & 0x1f;
+        idlen = idlen < sizeof(name) ? idlen : sizeof(name) - 1;
+        memcpy(name, i->second.compact->id_string, idlen);
         ss << " : compact '" << i->second.compact->id_string
                 << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->event_type
                 << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->sensor.type;
@@ -581,6 +592,12 @@ void Device::initAiRecord(::aiRecord* _pai) {
         _pai->hyst = ::sdr_convert_sensor_hysterisis(sdr, hyst);
       } // if
     } // if
+
+    {// Units
+      const char *c=ipmi_sdr_get_unit_string(sdr->cmn.unit.pct,
+        sdr->cmn.unit.modifier, sdr->cmn.unit.type.base, sdr->cmn.unit.type.modifier);
+      if(c) strncpy(_pai->egu,c,sizeof(_pai->egu));
+    }
   }
 } // Device::initAiRecord
 
