@@ -12,6 +12,7 @@ extern "C" {
 #include <epicsTypes.h>
 
 #include <map>
+#include <memory>
 #include <string>
 #include <set>
 
@@ -86,16 +87,24 @@ class Device {
 
     ::ipmi_intf* intf_ = nullptr;
 
-    typedef struct {
-      uint8_t type;
-      union {
-        ::sdr_record_common_sensor* common;
-        ::sdr_record_full_sensor* full;
-        ::sdr_record_compact_sensor* compact;
-      };
-      /// last reading was usable.
-      bool good{true};
-    } any_sensor_ptr;
+    struct any_sensor_ptr {
+         const uint8_t type;
+         /// last reading was usable.
+         bool good{true};
+
+         explicit any_sensor_ptr();
+         explicit any_sensor_ptr(::sdr_record_full_sensor* _p);
+         explicit any_sensor_ptr(::sdr_record_compact_sensor* _p);
+
+         operator ::sdr_record_full_sensor*() const;
+         operator ::sdr_record_common_sensor*() const;
+         operator ::sdr_record_compact_sensor*() const;
+
+         ::sdr_record_common_sensor* operator()() const;
+
+      private:
+         std::shared_ptr<::sdr_record_common_sensor> data_ptr;
+    };
     typedef std::map<sensor_id_t, any_sensor_ptr> sensor_list_t;
     sensor_list_t sensors_;
 

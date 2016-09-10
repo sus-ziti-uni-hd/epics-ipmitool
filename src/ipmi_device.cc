@@ -51,10 +51,6 @@ Device::Device(short _id) {
 
 Device::~Device() {
   if (intf_->close) intf_->close(intf_);
-  for (sensor_list_t::iterator i = sensors_.begin();
-       i != sensors_.end(); ++i) {
-    free(i->second.common);
-  } // for i
 } // Device destructor
 
 
@@ -239,7 +235,7 @@ const ::sensor_reading* Device::ipmiQuery(const sensor_id_t& _sensor) {
   intf_->target_addr = _sensor.ipmb;
   // returns a pointer to an internal variable
   const ::sensor_reading* const sr = ::ipmi_sdr_read_sensor_value(intf_,
-                                     i->second.common,
+                                     i->second,
                                      i->second.type, 2 /* precision */);
   return sr;
 }
@@ -334,26 +330,26 @@ void Device::detectSensors() {
       
     switch (i->second.type) {
       case SDR_RECORD_TYPE_FULL_SENSOR:
-        idlen = i->second.full->id_code & 0x1f;
+        idlen = static_cast<::sdr_record_full_sensor*>(i->second)->id_code & 0x1f;
         idlen = idlen < sizeof(name) ? idlen : sizeof(name) - 1;
-        memcpy(name, i->second.full->id_string, idlen);
-        ss << " : full '" << i->second.full->id_string
-                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->event_type
-                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->sensor.type;
+        memcpy(name, static_cast<::sdr_record_full_sensor*>(i->second)->id_string, idlen);
+        ss << " : full '" << name
+                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second()->event_type
+                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second()->sensor.type;
         break;
       case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        idlen = i->second.compact->id_code & 0x1f;
+        idlen = static_cast<::sdr_record_compact_sensor*>(i->second)->id_code & 0x1f;
         idlen = idlen < sizeof(name) ? idlen : sizeof(name) - 1;
-        memcpy(name, i->second.compact->id_string, idlen);
-        ss << " : compact '" << i->second.compact->id_string
-                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->event_type
-                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second.common->sensor.type;
+        memcpy(name, static_cast<::sdr_record_compact_sensor*>(i->second)->id_string, idlen);
+        ss << " : compact '" << name
+                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second()->event_type
+                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second()->sensor.type;
         break;
       default:
         ss << " : unexpected type 0x" << std::hex << +i->second.type;
     }
-    if (i->second.common->sensor.type <= SENSOR_TYPE_MAX)
-      ss << " (" << ::sensor_type_desc[i->second.common->sensor.type] << ")";
+    if (i->second()->sensor.type <= SENSOR_TYPE_MAX)
+      ss << " (" << ::sensor_type_desc[i->second()->sensor.type] << ")";
     ss << "." << std::ends;
 
     SuS_LOG(finer, log_id(), ss.str());
@@ -381,10 +377,10 @@ void Device::dumpDatabase(const std::string& _file) {
     std::string name;
     switch (sensor.second.type) {
       case SDR_RECORD_TYPE_FULL_SENSOR:
-        name = reinterpret_cast<const char*>(sensor.second.full->id_string);
+        name = reinterpret_cast<const char*>(static_cast<::sdr_record_full_sensor*>(sensor.second)->id_string);
         break;
       case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        name = reinterpret_cast<const char*>(sensor.second.compact->id_string);
+        name = reinterpret_cast<const char*>(static_cast<::sdr_record_compact_sensor*>(sensor.second)->id_string);
         break;
       default:
         std::stringstream ss;
@@ -401,10 +397,10 @@ void Device::dumpDatabase(const std::string& _file) {
     const std::string rectype { sr->s_has_analog_value ? "ai" : "mbbi" };
     of << std::endl
             << "# " << name
-            << ", event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor.second.common->event_type
-            << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor.second.common->sensor.type;
-    if (sensor.second.common->sensor.type <= SENSOR_TYPE_MAX)
-      of << " (" << ::sensor_type_desc[sensor.second.common->sensor.type] << ")";
+            << ", event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor.second()->event_type
+            << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor.second()->sensor.type;
+    if (sensor.second()->sensor.type <= SENSOR_TYPE_MAX)
+      of << " (" << ::sensor_type_desc[sensor.second()->sensor.type] << ")";
 
     of << std::endl
             << "record(" << rectype << ", \"" << pvname << "\")" << std::endl
@@ -444,12 +440,9 @@ void Device::find_ipmb() {
   slaves_.insert(rsp->data[2]);
 } // Device::find_ipmb
 
-
 void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec) {
   sensor_id_t id(_addr, _rec->cmn.keys.sensor_num, _rec->cmn.entity.id,  _rec->cmn.entity.instance, reinterpret_cast<char *>(_rec->id_string));
-  any_sensor_ptr any;
-  any.type = SDR_RECORD_TYPE_FULL_SENSOR;
-  any.full = _rec;
+  any_sensor_ptr any{_rec};
   sensors_.emplace(id, any);
   std::stringstream ss;
   ss << "  found full " << id.prettyPrint()
@@ -463,9 +456,7 @@ void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec
 
 void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor* _rec) {
   sensor_id_t id(_addr, _rec->cmn.keys.sensor_num, _rec->cmn.entity.id,  _rec->cmn.entity.instance, reinterpret_cast<char *>(_rec->id_string));
-  any_sensor_ptr any;
-  any.type = SDR_RECORD_TYPE_COMPACT_SENSOR;
-  any.compact = _rec;
+  any_sensor_ptr any{_rec};
   sensors_.emplace(id, any);
   std::stringstream ss;
   ss << "  found compact " << id.prettyPrint()
@@ -499,13 +490,13 @@ Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _
   if (strlen(_rec->desc) == 0) {
     switch (i->second.type) {
       case SDR_RECORD_TYPE_FULL_SENSOR:
-        strncpy(_rec->desc, reinterpret_cast<const char*>(i->second.full->id_string), 40);
+        strncpy(_rec->desc, reinterpret_cast<const char*>(static_cast<::sdr_record_full_sensor*>(i->second)->id_string), 40);
         break;
       case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        strncpy(_rec->desc, reinterpret_cast<const char*>(i->second.compact->id_string), 40);
+        strncpy(_rec->desc, reinterpret_cast<const char*>(static_cast<::sdr_record_compact_sensor*>(i->second)->id_string), 40);
         break;
       default:
-        std::cerr << "Unexpected type 0x" << std::hex << +i->second.common->sensor.type << std::endl;
+        std::cerr << "Unexpected type 0x" << std::hex << +i->second()->sensor.type << std::endl;
     }
     _rec->desc[40] = '\0';
   } // if
@@ -519,21 +510,21 @@ void Device::initAiRecord(::aiRecord* _pai) {
 
   SuS_LOG_STREAM(finest, log_id(), "SENSOR " << +_pai->inp.value.abio.card);
   SuS_LOG_STREAM(finest, log_id(), "  THRESH "
-                 << +i.common->mask.type.threshold.read.unr << " "
-                 << +i.common->mask.type.threshold.read.ucr << " "
-                 << +i.common->mask.type.threshold.read.unc << " "
-                 << +i.common->mask.type.threshold.read.lnr << " "
-                 << +i.common->mask.type.threshold.read.lcr << " "
-                 << +i.common->mask.type.threshold.read.lnc);
+                 << +i()->mask.type.threshold.read.unr << " "
+                 << +i()->mask.type.threshold.read.ucr << " "
+                 << +i()->mask.type.threshold.read.unc << " "
+                 << +i()->mask.type.threshold.read.lnr << " "
+                 << +i()->mask.type.threshold.read.lcr << " "
+                 << +i()->mask.type.threshold.read.lnc);
   SuS_LOG_STREAM(finest, log_id(), "  HYSTERESIS "
-                 << +i.common->sensor.capabilities.hysteresis);
+                 << +i()->sensor.capabilities.hysteresis);
   if (i.type == SDR_RECORD_TYPE_FULL_SENSOR) {
-    SuS_LOG_STREAM(finest, log_id(), "  LINEAR " << +i.full->linearization);
+    SuS_LOG_STREAM(finest, log_id(), "  LINEAR " << +static_cast<::sdr_record_full_sensor*>(i)->linearization);
   }
 
   // TODO: for compact sensor
   if (i.type == SDR_RECORD_TYPE_FULL_SENSOR) {
-    ::sdr_record_full_sensor* const sdr = i.full;
+    ::sdr_record_full_sensor* const sdr = i;
     // swap for 1/x conversions, cf. section 36.5 of IPMI specification
     bool swap_hi_lo = (sdr->linearization == SDR_SENSOR_L_1_X);
 
@@ -630,12 +621,12 @@ void Device::initMbbiRecord(::mbbiRecord* _pmbbi) {
 
   const struct ipmi_event_sensor_types *evt;
   uint8_t typ;
-  if (i.common->event_type == 0x6f) {
+  if (i()->event_type == 0x6f) {
     evt = sensor_specific_event_types;
-    typ = i.common->sensor.type;
+    typ = i()->sensor.type;
   } else {
     evt = generic_event_types;
-    typ = i.common->event_type;
+    typ = i()->event_type;
   }
 
   for (; evt->desc != NULL; evt++) {
@@ -676,9 +667,11 @@ void Device::iterateSDRs(slave_addr_t _addr, bool _force_internal) {
         break;
       case SDR_RECORD_TYPE_MC_DEVICE_LOCATOR:
         slaves_.insert(reinterpret_cast< ::sdr_record_mc_locator*>(rec)->dev_slave_addr);
+        ::free(rec);
         break;
       default:
         SuS_LOG_STREAM(finest, log_id(), "ignoring sensor type 0x" << std::hex << +header->type << ".");
+        ::free(rec);
         break;
     } // switch
   } // while
@@ -762,6 +755,40 @@ bool Device::readMbbiSensor(::mbbiRecord* _pmbbi) {
 Device::query_job_t::query_job_t(const ::link& _loc, query_func_t _f, unsigned _pvid)
   : sensor(_loc), query_func(_f), pvid(_pvid) {
 } // Device::query_job_t constructor
+
+
+Device::any_sensor_ptr::any_sensor_ptr()
+   : type{0U}, data_ptr{nullptr}
+{}
+
+Device::any_sensor_ptr::any_sensor_ptr(::sdr_record_full_sensor* _p)
+   : type{SDR_RECORD_TYPE_FULL_SENSOR}, data_ptr{std::shared_ptr<::sdr_record_common_sensor>(&_p->cmn, [](::sdr_record_common_sensor *p){::free(p);})}
+{}
+
+Device::any_sensor_ptr::any_sensor_ptr(::sdr_record_compact_sensor* _p)
+   : type{SDR_RECORD_TYPE_COMPACT_SENSOR}, data_ptr{std::shared_ptr<::sdr_record_common_sensor>(&_p->cmn, [](::sdr_record_common_sensor *p){::free(p);})}
+{}
+
+Device::any_sensor_ptr::operator ::sdr_record_full_sensor*() const
+{
+   assert(type == SDR_RECORD_TYPE_FULL_SENSOR);
+   return reinterpret_cast<::sdr_record_full_sensor*>(data_ptr.get());
+}
+
+Device::any_sensor_ptr::operator ::sdr_record_common_sensor*() const
+{
+   return data_ptr.get();
+}
+
+Device::any_sensor_ptr::operator ::sdr_record_compact_sensor*() const
+{
+   assert(type == SDR_RECORD_TYPE_COMPACT_SENSOR);
+   return reinterpret_cast<::sdr_record_compact_sensor*>(data_ptr.get());
+}
+
+::sdr_record_common_sensor *Device::any_sensor_ptr::operator()() const {
+   return data_ptr.get();
+}
 
 } // namespace IPMIIOC
 
