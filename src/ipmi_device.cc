@@ -682,6 +682,7 @@ void Device::iterateSDRs(slave_addr_t _addr, bool _force_internal) {
         break;
     } // switch
   } // while
+  ::free(itr);
 
   SuS_LOG_STREAM(finer, log_id(), "found " << found << " sensors @0x" << std::hex << +_addr << (_force_internal ? ", internal." : "."));
 } // Device::iterateSDRs
