@@ -646,12 +646,12 @@ void Device::iterateSDRs(slave_addr_t _addr, bool _force_internal) {
   SuS_LOG_STREAM(finest, log_id(), "iterating @0x" << std::hex << +_addr << (_force_internal ? ", internal." : "."));
   intf_->target_addr = _addr;
 
-  ::ipmi_sdr_iterator* itr = ::ipmi_sdr_start(intf_, _force_internal ? 1 : 0);
+  std::unique_ptr<::ipmi_sdr_iterator, decltype(::free)*> itr{::ipmi_sdr_start(intf_, _force_internal ? 1 : 0), ::free};
   if (!itr) return;
 
   unsigned found = 0;
-  while (::sdr_get_rs* header = ::ipmi_sdr_get_next_header(intf_, itr)) {
-    uint8_t* const rec = ::ipmi_sdr_get_record(intf_, header, itr);
+  while (::sdr_get_rs* header = ::ipmi_sdr_get_next_header(intf_, itr.get())) {
+    uint8_t* const rec = ::ipmi_sdr_get_record(intf_, header, itr.get());
     if (rec == NULL) {
       // TODO
       continue;
@@ -675,7 +675,6 @@ void Device::iterateSDRs(slave_addr_t _addr, bool _force_internal) {
         break;
     } // switch
   } // while
-  ::free(itr);
 
   SuS_LOG_STREAM(finer, log_id(), "found " << found << " sensors @0x" << std::hex << +_addr << (_force_internal ? ", internal." : "."));
 } // Device::iterateSDRs
