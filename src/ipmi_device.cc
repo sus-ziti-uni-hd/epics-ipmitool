@@ -226,7 +226,7 @@ bool Device::mbbiQuery(const sensor_id_t& _sensor, result_t& _result) {
 
 
 const ::sensor_reading* Device::ipmiQuery(const sensor_id_t& _sensor) {
-  sensor_list_t::const_iterator i = sensors_.find(_sensor);
+  const auto& i = sensors_.find(_sensor);
   if (i == sensors_.end()) {
     SuS_LOG_PRINTF(warning, log_id(), "sensor %s not found.", _sensor.prettyPrint().c_str());
     return nullptr;
@@ -313,43 +313,41 @@ void Device::detectSensors() {
   iterateSDRs(local_addr_);
   if (sensors_.size() == 0) iterateSDRs(local_addr_, true);
   find_ipmb();
-  for (std::set<slave_addr_t>::const_iterator i = slaves_.begin(); i != slaves_.end();
-       ++i) iterateSDRs(*i);
+  for (const auto& i : slaves_) iterateSDRs(i);
 
   SuS_LOG_STREAM(fine, log_id(), "Total sensor count: " << sensors_.size());
 
-  for (sensor_list_t::iterator i = sensors_.begin();
-       i != sensors_.end(); ++i) {
+  for (const auto& i : sensors_) {
     std::stringstream ss;
-    ss << "sensor 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.ipmb
-       << "/0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.sensor;
+    ss << "sensor 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.first.ipmb
+       << "/0x" << std::hex << std::setw(2) << std::setfill('0') << +i.first.sensor;
       
     char name[17];// id_string does not need to be zero terminated... check length!
     int idlen;// actually, we should convert it to ASCII first, if its bcdplus or 6 bit -- TODO
     memset(name, 0, sizeof(name));
       
-    switch (i->second.type) {
+    switch (i.second.type) {
       case SDR_RECORD_TYPE_FULL_SENSOR:
-        idlen = static_cast<::sdr_record_full_sensor*>(i->second)->id_code & 0x1f;
+        idlen = static_cast<::sdr_record_full_sensor*>(i.second)->id_code & 0x1f;
         idlen = idlen < sizeof(name) ? idlen : sizeof(name) - 1;
-        memcpy(name, static_cast<::sdr_record_full_sensor*>(i->second)->id_string, idlen);
+        memcpy(name, static_cast<::sdr_record_full_sensor*>(i.second)->id_string, idlen);
         ss << " : full '" << name
-                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second()->event_type
-                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second()->sensor.type;
+                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second()->event_type
+                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second()->sensor.type;
         break;
       case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        idlen = static_cast<::sdr_record_compact_sensor*>(i->second)->id_code & 0x1f;
+        idlen = static_cast<::sdr_record_compact_sensor*>(i.second)->id_code & 0x1f;
         idlen = idlen < sizeof(name) ? idlen : sizeof(name) - 1;
-        memcpy(name, static_cast<::sdr_record_compact_sensor*>(i->second)->id_string, idlen);
+        memcpy(name, static_cast<::sdr_record_compact_sensor*>(i.second)->id_string, idlen);
         ss << " : compact '" << name
-                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second()->event_type
-                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->second()->sensor.type;
+                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second()->event_type
+                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second()->sensor.type;
         break;
       default:
-        ss << " : unexpected type 0x" << std::hex << +i->second.type;
+        ss << " : unexpected type 0x" << std::hex << +i.second.type;
     }
-    if (i->second()->sensor.type <= SENSOR_TYPE_MAX)
-      ss << " (" << ::sensor_type_desc[i->second()->sensor.type] << ")";
+    if (i.second()->sensor.type <= SENSOR_TYPE_MAX)
+      ss << " (" << ::sensor_type_desc[i.second()->sensor.type] << ")";
     ss << "." << std::ends;
 
     SuS_LOG(finer, log_id(), ss.str());
@@ -470,7 +468,7 @@ void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor
 
 Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _inp) {
   sensor_id_t id(_inp);
-  sensor_list_t::iterator i = sensors_.find(id);
+  const auto& i = sensors_.find(id);
   if (i == sensors_.end()) {
     SuS_LOG_PRINTF(warning, log_id(), "sensor %s not found.", id.prettyPrint().c_str());
     return any_sensor_ptr();

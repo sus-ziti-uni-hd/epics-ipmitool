@@ -24,8 +24,7 @@ SuS::logfile::subsystem_registrator log_id("IPMIConn");
 namespace {
 
 IPMIIOC::Device* findDevice(const link& _inp) {
-  IPMIIOC::intf_map_t::const_iterator it = IPMIIOC::s_interfaces.find(
-        _inp.value.abio.link);
+  const auto& it = IPMIIOC::s_interfaces.find(_inp.value.abio.link);
   if (it == IPMIIOC::s_interfaces.end()) return NULL;
   else return it->second;
 } // findDevice
@@ -86,7 +85,7 @@ extern "C" {
 
 
   void ipmiScanDevice(int _id) {
-    IPMIIOC::intf_map_t::const_iterator it = IPMIIOC::s_interfaces.find(_id);
+    const auto& it = IPMIIOC::s_interfaces.find(_id);
     if (it == IPMIIOC::s_interfaces.end()) {
       SuS_LOG_STREAM(warning, log_id(), "Device " << _id << " not found.");
       return;
