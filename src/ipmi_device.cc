@@ -324,9 +324,9 @@ void Device::detectSensors() {
     ss << "sensor 0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.ipmb
        << "/0x" << std::hex << std::setw(2) << std::setfill('0') << +i->first.sensor;
       
-    char *name[17];// id_string does not need to be zero terminated... check length!
+    char name[17];// id_string does not need to be zero terminated... check length!
     int idlen;// actually, we should convert it to ASCII first, if its bcdplus or 6 bit -- TODO
-    memset(name, 0 ,sizeof(name));
+    memset(name, 0, sizeof(name));
       
     switch (i->second.type) {
       case SDR_RECORD_TYPE_FULL_SENSOR:
