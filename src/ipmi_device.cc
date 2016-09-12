@@ -468,6 +468,7 @@ void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor
 
 Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _inp) {
   sensor_id_t id(_inp);
+  s_active_ipmb.insert(id.ipmb);
   const auto& i = sensors_.find(id);
   if (i == sensors_.end()) {
     SuS_LOG_PRINTF(warning, log_id(), "sensor %s not found.", id.prettyPrint().c_str());
