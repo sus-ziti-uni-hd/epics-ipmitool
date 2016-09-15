@@ -22,12 +22,12 @@ sensor_id_t::sensor_id_t(const ::link& _loc)
 
 bool sensor_id_t::operator <(const sensor_id_t& _other) const {
   if (ipmb < _other.ipmb) return true;
-  if ( ipmb > _other.ipmb) return false;
+  if (ipmb > _other.ipmb) return false;
   // sensor is NOT used 
-  if ( entity < _other.entity) return true;
-  if ( entity > _other.entity) return false;
-  if ( instance < _other.instance) return true;
-  if ( instance > _other.instance) return false;
+  if (entity < _other.entity) return true;
+  if (entity > _other.entity) return false;
+  if (instance < _other.instance) return true;
+  if (instance > _other.instance) return false;
   return  name < _other.name;
 } // Device::sensor_id_t::operator <
 
@@ -36,9 +36,9 @@ bool sensor_id_t::operator ==(const sensor_id_t& _other) const {
   // sensor is NOT used 
 
   return (ipmb == _other.ipmb)
-	&& (entity == _other.entity)
-	&& (instance == _other.instance)
-	&& (name == _other.name);
+    && (entity == _other.entity)
+    && (instance == _other.instance)
+    && (name == _other.name);
 } // Device::sensor_id_t::operator ==
 
 
