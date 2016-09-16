@@ -466,7 +466,7 @@ void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor
 } // Device::handleCompactSensor
 
 
-Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _inp) {
+any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _inp) {
   sensor_id_t id(_inp);
   s_active_ipmb.insert(id.ipmb);
   const auto& i = sensors_.find(id);
@@ -754,39 +754,6 @@ Device::query_job_t::query_job_t(const ::link& _loc, query_func_t _f, unsigned _
   : sensor(_loc), query_func(_f), pvid(_pvid) {
 } // Device::query_job_t constructor
 
-
-Device::any_sensor_ptr::any_sensor_ptr()
-   : type{0U}, data_ptr{nullptr}
-{}
-
-Device::any_sensor_ptr::any_sensor_ptr(::sdr_record_full_sensor* _p)
-   : type{SDR_RECORD_TYPE_FULL_SENSOR}, data_ptr{std::shared_ptr<::sdr_record_common_sensor>(&_p->cmn, [](::sdr_record_common_sensor *p){::free(p);})}
-{}
-
-Device::any_sensor_ptr::any_sensor_ptr(::sdr_record_compact_sensor* _p)
-   : type{SDR_RECORD_TYPE_COMPACT_SENSOR}, data_ptr{std::shared_ptr<::sdr_record_common_sensor>(&_p->cmn, [](::sdr_record_common_sensor *p){::free(p);})}
-{}
-
-Device::any_sensor_ptr::operator ::sdr_record_full_sensor*() const
-{
-   assert(type == SDR_RECORD_TYPE_FULL_SENSOR);
-   return reinterpret_cast<::sdr_record_full_sensor*>(data_ptr.get());
-}
-
-Device::any_sensor_ptr::operator ::sdr_record_common_sensor*() const
-{
-   return data_ptr.get();
-}
-
-Device::any_sensor_ptr::operator ::sdr_record_compact_sensor*() const
-{
-   assert(type == SDR_RECORD_TYPE_COMPACT_SENSOR);
-   return reinterpret_cast<::sdr_record_compact_sensor*>(data_ptr.get());
-}
-
-::sdr_record_common_sensor *Device::any_sensor_ptr::operator()() const {
-   return data_ptr.get();
-}
 
 } // namespace IPMIIOC
 

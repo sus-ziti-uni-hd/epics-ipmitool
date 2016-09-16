@@ -2,8 +2,12 @@
 
 #include <cstdint>
 #include <epicsTypes.h>
+#include <memory>
 #include <string>
 
+extern "C" {
+#include <ipmitool/ipmi_sdr.h>
+}
 struct link;
 
 namespace IPMIIOC {
@@ -36,6 +40,25 @@ struct sensor_id_t {
   bool operator ==(const sensor_id_t& _other) const;
 
   std::string prettyPrint() const;
+};
+
+struct any_sensor_ptr {
+   const uint8_t type;
+   /// last reading was usable.
+   bool good{true};
+
+   explicit any_sensor_ptr();
+   explicit any_sensor_ptr(::sdr_record_full_sensor* _p);
+   explicit any_sensor_ptr(::sdr_record_compact_sensor* _p);
+
+   operator ::sdr_record_full_sensor*() const;
+   operator ::sdr_record_common_sensor*() const;
+   operator ::sdr_record_compact_sensor*() const;
+
+   ::sdr_record_common_sensor* operator()() const;
+
+private:
+   std::shared_ptr<::sdr_record_common_sensor> data_ptr;
 };
 
 } // namespace IPMIIOC

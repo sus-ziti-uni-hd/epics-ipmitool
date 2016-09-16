@@ -54,4 +54,38 @@ std::string sensor_id_t::prettyPrint() const {
    return ss.str();
 }
 
+
+any_sensor_ptr::any_sensor_ptr()
+   : type{0U}, data_ptr{nullptr}
+{}
+
+any_sensor_ptr::any_sensor_ptr(::sdr_record_full_sensor* _p)
+   : type{SDR_RECORD_TYPE_FULL_SENSOR}, data_ptr{std::shared_ptr<::sdr_record_common_sensor>(&_p->cmn, [](::sdr_record_common_sensor *p){::free(p);})}
+{}
+
+any_sensor_ptr::any_sensor_ptr(::sdr_record_compact_sensor* _p)
+   : type{SDR_RECORD_TYPE_COMPACT_SENSOR}, data_ptr{std::shared_ptr<::sdr_record_common_sensor>(&_p->cmn, [](::sdr_record_common_sensor *p){::free(p);})}
+{}
+
+any_sensor_ptr::operator ::sdr_record_full_sensor*() const
+{
+   assert(type == SDR_RECORD_TYPE_FULL_SENSOR);
+   return reinterpret_cast<::sdr_record_full_sensor*>(data_ptr.get());
+}
+
+any_sensor_ptr::operator ::sdr_record_common_sensor*() const
+{
+   return data_ptr.get();
+}
+
+any_sensor_ptr::operator ::sdr_record_compact_sensor*() const
+{
+   assert(type == SDR_RECORD_TYPE_COMPACT_SENSOR);
+   return reinterpret_cast<::sdr_record_compact_sensor*>(data_ptr.get());
+}
+
+::sdr_record_common_sensor *any_sensor_ptr::operator()() const {
+   return data_ptr.get();
+}
+
 }
