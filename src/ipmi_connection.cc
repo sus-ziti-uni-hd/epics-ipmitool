@@ -10,7 +10,6 @@ extern "C" {
 
 #include <dbCommon.h>
 #include <errlog.h>
-#include <initHooks.h>
 
 #include <logger.h>
 #include <sstream>
@@ -33,14 +32,6 @@ IPMIIOC::Device* findDevice(const link& _inp) {
 } // namespace
 
 extern "C" {
-  static void initHook(::initHookState _state) {
-     if (_state == ::initHookAfterFinishDevSup) {
-        for (auto i : IPMIIOC::s_active_ipmb) {
-           SuS_LOG_PRINTF(info, log_id(), "IPMB 0x%02x is used.", i);
-        }
-     }
-  }
-
 
   void ipmiConnect(int _id, const char* _hostname, const char* _username,
                    const char* _password, const char* _proto, int _privlevel) {
@@ -54,7 +45,6 @@ extern "C" {
       ::errlogSevPrintf(::errlogMajor, "Memory allocation error: %s\n", ba.what());
       return;
     } // catch
-    ::initHookRegister(initHook);
   } // ipmiConnect
 
 

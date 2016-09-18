@@ -3,9 +3,6 @@
 
 #include <callback.h>
 #include <map>
-#include <set>
-
-#include "ipmi_types.h"
 
 // forward declaration of the EPICS type.
 struct ipmi_intf;
@@ -22,10 +19,6 @@ typedef std::map<int, Device*> intf_map_t;
  *  re-established after a link error. This might change the pointer!
  */
 extern intf_map_t s_interfaces;
-
-typedef std::set<slave_addr_t> active_ipmb_set_t;
-/** List of busses with at least one defined PV. */
-extern active_ipmb_set_t s_active_ipmb;
 
 /** Private record data stored in dpvt. */
 struct dpvt_t {
