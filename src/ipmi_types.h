@@ -44,7 +44,7 @@ struct sensor_id_t {
 };
 
 struct any_sensor_ptr {
-   const uint8_t type;
+   uint8_t type;
    /// last reading was usable.
    bool good{true};
 
