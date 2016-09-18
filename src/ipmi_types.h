@@ -12,6 +12,7 @@ struct link;
 
 namespace IPMIIOC {
 
+/** Result of a reading by the reader thread. */
 struct result_t {
   epicsInt32 rval;
   union {
