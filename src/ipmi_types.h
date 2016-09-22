@@ -64,4 +64,31 @@ private:
    std::shared_ptr<::sdr_record_common_sensor> data_ptr;
 };
 
+/** Enum of all supported EPICS record types. */
+enum class RecordType {
+   ai,
+   mbbi,
+   mbbiDirect,
+};
+
+struct any_record_ptr {
+   const RecordType type;
+
+   any_record_ptr(::aiRecord *_rec);
+   any_record_ptr(::mbbiDirectRecord *_rec);
+   any_record_ptr(::mbbiRecord *_rec);
+
+   operator ::aiRecord*() const;
+   operator ::mbbiDirectRecord*() const;
+   operator ::mbbiRecord*() const;
+
+private:
+   union {
+      ::aiRecord *ai;
+      ::mbbiDirectRecord *mbbiDirect;
+      ::mbbiRecord *mbbi;
+   } data_ptr;
+};
+
+
 } // namespace IPMIIOC

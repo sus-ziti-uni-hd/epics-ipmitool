@@ -93,4 +93,32 @@ any_sensor_ptr::operator ::sdr_record_compact_sensor*() const
    return data_ptr.get();
 }
 
+
+any_record_ptr::any_record_ptr(::aiRecord *_rec) : type(RecordType::ai) {
+   data_ptr.ai = _rec;
+}
+
+any_record_ptr::any_record_ptr(::mbbiDirectRecord *_rec) : type(RecordType::mbbiDirect) {
+   data_ptr.mbbiDirect = _rec;
+}
+
+any_record_ptr::any_record_ptr(::mbbiRecord *_rec) : type(RecordType::mbbi) {
+   data_ptr.mbbi = _rec;
+}
+
+any_record_ptr::operator ::aiRecord*() const {
+   assert(type == RecordType::ai);
+   return data_ptr.ai;
+}
+
+any_record_ptr::operator ::mbbiDirectRecord*() const {
+   assert(type == RecordType::mbbiDirect);
+   return data_ptr.mbbiDirect;
+}
+
+any_record_ptr::operator ::mbbiRecord*() const {
+   assert(type == RecordType::mbbi);
+   return data_ptr.mbbi;
+}
+
 }
