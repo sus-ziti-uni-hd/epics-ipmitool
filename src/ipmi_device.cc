@@ -503,6 +503,7 @@ any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _inp) {
 
 void Device::initAiRecord(::aiRecord* _pai) {
   auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pai), _pai->inp);
+  pv_map_.emplace(sensor_id_t{_pai->inp}, _pai);
   if(_pai->dpvt==NULL) return;
   callbackSetCallback(aiCallback, &static_cast<dpvt_t*>(_pai->dpvt)->cb);
 
@@ -593,6 +594,7 @@ void Device::initAiRecord(::aiRecord* _pai) {
 
 void Device::initMbbiDirectRecord(::mbbiDirectRecord* _pmbbi) {
   auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
+  pv_map_.emplace(sensor_id_t{_pmbbi->inp}, _pmbbi);
   if(_pmbbi->dpvt==NULL) return;
   callbackSetCallback(mbbiDirectCallback, &static_cast<dpvt_t*>(_pmbbi->dpvt)->cb);
 } // Device::initMbbiDirectRecord
@@ -600,6 +602,7 @@ void Device::initMbbiDirectRecord(::mbbiDirectRecord* _pmbbi) {
 
 void Device::initMbbiRecord(::mbbiRecord* _pmbbi) {
   auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
+  pv_map_.emplace(sensor_id_t{_pmbbi->inp}, _pmbbi);
   if(_pmbbi->dpvt==NULL) return;
   callbackSetCallback(mbbiCallback, &static_cast<dpvt_t*>(_pmbbi->dpvt)->cb);
 

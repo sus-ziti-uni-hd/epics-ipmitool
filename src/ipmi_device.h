@@ -98,6 +98,8 @@ class Device {
     uint8_t local_addr_;
 
     std::set<slave_addr_t> slaves_;
+    using PVs_for_sensor_map_t = std::multimap<sensor_id_t, any_record_ptr>;
+    PVs_for_sensor_map_t pv_map_;
 }; // class Device
 
 } // namespace IPMIIOC
