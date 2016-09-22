@@ -67,6 +67,11 @@ any_sensor_ptr::any_sensor_ptr(::sdr_record_compact_sensor* _p)
    : type{SDR_RECORD_TYPE_COMPACT_SENSOR}, data_ptr{std::shared_ptr<::sdr_record_common_sensor>(&_p->cmn, [](::sdr_record_common_sensor *p){::free(p);})}
 {}
 
+any_sensor_ptr::operator bool() const
+{
+   return data_ptr.get() != nullptr;
+}
+
 any_sensor_ptr::operator ::sdr_record_full_sensor*() const
 {
    assert(type == SDR_RECORD_TYPE_FULL_SENSOR);

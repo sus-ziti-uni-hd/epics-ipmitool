@@ -52,6 +52,8 @@ struct any_sensor_ptr {
    explicit any_sensor_ptr(::sdr_record_full_sensor* _p);
    explicit any_sensor_ptr(::sdr_record_compact_sensor* _p);
 
+   /// Is a record available?
+   operator bool() const;
    operator ::sdr_record_full_sensor*() const;
    operator ::sdr_record_common_sensor*() const;
    operator ::sdr_record_compact_sensor*() const;
