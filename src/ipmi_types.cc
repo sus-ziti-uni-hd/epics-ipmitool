@@ -121,4 +121,12 @@ any_record_ptr::operator ::mbbiRecord*() const {
    return data_ptr.mbbi;
 }
 
+std::string any_record_ptr::pvName() const {
+   if (!data_ptr.common) {
+      return "/NULL/";
+   } else {
+      return data_ptr.common->name;
+   }
+}
+
 }

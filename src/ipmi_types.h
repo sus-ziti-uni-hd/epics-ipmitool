@@ -9,6 +9,7 @@ extern "C" {
 #include <ipmitool/ipmi_sdr.h>
 }
 struct aiRecord;
+struct dbCommon;
 struct link;
 struct mbbiDirectRecord;
 struct mbbiRecord;
@@ -85,8 +86,11 @@ struct any_record_ptr {
    operator ::mbbiDirectRecord*() const;
    operator ::mbbiRecord*() const;
 
+   std::string pvName() const;
+
 private:
    union {
+      ::dbCommon *common;
       ::aiRecord *ai;
       ::mbbiDirectRecord *mbbiDirect;
       ::mbbiRecord *mbbi;
