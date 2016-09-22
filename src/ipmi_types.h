@@ -8,7 +8,10 @@
 extern "C" {
 #include <ipmitool/ipmi_sdr.h>
 }
+struct aiRecord;
 struct link;
+struct mbbiDirectRecord;
+struct mbbiRecord;
 
 namespace IPMIIOC {
 
