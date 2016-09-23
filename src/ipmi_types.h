@@ -36,6 +36,9 @@ struct sensor_id_t {
   sensor_id_t(slave_addr_t _ipmb, uint8_t _entity, uint8_t _inst, const std::string& _name);
   /** Construct from an EPICS link. */
   explicit sensor_id_t(const ::link& _loc);
+  /** Construct from SDR + IPMP address. */
+  sensor_id_t(slave_addr_t _ipmb, const ::sdr_record_full_sensor* _sdr);
+  sensor_id_t(slave_addr_t _ipmb, const ::sdr_record_compact_sensor* _sdr);
 
   slave_addr_t ipmb;
   uint8_t entity;

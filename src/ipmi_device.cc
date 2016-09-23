@@ -464,7 +464,7 @@ void Device::find_ipmb() {
 } // Device::find_ipmb
 
 void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec) {
-  sensor_id_t id(_addr, _rec->cmn.entity.id, _rec->cmn.entity.instance, reinterpret_cast<char *>(_rec->id_string));
+  sensor_id_t id{_addr, _rec};
   // creates entry, if not found
   auto &i = sensors_[id];
   if (i.sdr_record()) {
@@ -487,7 +487,7 @@ void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec
 
 
 void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor* _rec) {
-  sensor_id_t id(_addr, _rec->cmn.entity.id, _rec->cmn.entity.instance, reinterpret_cast<char *>(_rec->id_string));
+  sensor_id_t id{_addr, _rec};
   // creates entry, if not found
   auto &i = sensors_[id];
   if (i.sdr_record()) {

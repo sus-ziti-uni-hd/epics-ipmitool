@@ -21,6 +21,19 @@ sensor_id_t::sensor_id_t(const ::link& _loc)
 } // Device::sensor_id_t constructor
 
 
+sensor_id_t::sensor_id_t(slave_addr_t _ipmb, const ::sdr_record_full_sensor* _sdr)
+   : ipmb{_ipmb}, entity{_sdr->cmn.entity.id}, instance(_sdr->cmn.entity.instance)
+{
+   name = reinterpret_cast<const char *>(_sdr->id_string);
+}
+
+sensor_id_t::sensor_id_t(slave_addr_t _ipmb, const ::sdr_record_compact_sensor* _sdr)
+   : ipmb{_ipmb}, entity{_sdr->cmn.entity.id}, instance(_sdr->cmn.entity.instance)
+{
+   name = reinterpret_cast<const char *>(_sdr->id_string);
+}
+
+
 bool sensor_id_t::operator <(const sensor_id_t& _other) const {
   if (ipmb < _other.ipmb) return true;
   if (ipmb > _other.ipmb) return false;
