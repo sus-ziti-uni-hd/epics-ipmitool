@@ -355,6 +355,16 @@ void Device::detectSensors() {
 } // Device::detectSensors
 
 
+void Device::scanActiveIPMBs() {
+  if (!intf_) {
+    SuS_LOG(warning, log_id(), "Not scanning: not connected.");
+    return;
+  }
+  sensors_.clear();
+  for (const auto i : active_ipmbs_) iterateSDRs(i);
+}
+
+
 void Device::dumpDatabase(const std::string& _file) {
   if (!intf_) {
     SuS_LOG(warning, log_id(), "Not connected.");

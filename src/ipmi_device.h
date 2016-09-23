@@ -46,8 +46,11 @@ class Device {
     void initMbbiRecord(::mbbiRecord* _rec);
     bool readMbbiSensor(::mbbiRecord* _rec);
 
+    /** Full scan, all IPMBs we can find. */
     void detectSensors();
     void dumpDatabase(const std::string& _file);
+    /** Smart scan: Only IPMBs with defined PVs. */
+    void scanActiveIPMBs();
 
     bool ping();
 
@@ -97,6 +100,7 @@ class Device {
     ReaderThread* readerThread_;
     uint8_t local_addr_;
 
+    /// used during full scan.
     std::set<slave_addr_t> slaves_;
     /// IPMBs with at least one defined PV.
     std::set<slave_addr_t> active_ipmbs_;
