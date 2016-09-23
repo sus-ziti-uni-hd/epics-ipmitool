@@ -38,12 +38,16 @@ class Device {
                  const std::string& _password, const std::string& _proto, int _privlevel);
 
     void initAiRecord(::aiRecord* _rec);
+    /** Update the record with information from the SDR. */
+    void fillAiRecord(::dbCommon* _rec, const any_sensor_ptr &_sdr);
     bool readAiSensor(::aiRecord* _rec);
 
     void initMbbiDirectRecord(::mbbiDirectRecord* _rec);
     bool readMbbiDirectSensor(::mbbiDirectRecord* _rec);
 
     void initMbbiRecord(::mbbiRecord* _rec);
+    /** Update the record with information from the SDR. */
+    void fillMbbiRecord(::dbCommon* _rec, const any_sensor_ptr &_i);
     bool readMbbiSensor(::mbbiRecord* _rec);
 
     /** Full scan, all IPMBs we can find. */
@@ -90,10 +94,10 @@ class Device {
 
     ::ipmi_intf* intf_ = nullptr;
 
-    typedef std::map<sensor_id_t, any_sensor_ptr> sensor_list_t;
-    sensor_list_t sensors_;
+    status_map_t sensors_;
 
-    any_sensor_ptr initInputRecord(::dbCommon* _rec, const ::link& _inp);
+    void initInputRecord(::dbCommon* _rec, const ::link& _inp);
+    void initRecordDesc(::dbCommon* _rec, const any_sensor_ptr& _sdr);
 
     short id_;
     ::epicsMutex mutex_;
@@ -104,8 +108,19 @@ class Device {
     std::set<slave_addr_t> slaves_;
     /// IPMBs with at least one defined PV.
     std::set<slave_addr_t> active_ipmbs_;
+
     using PVs_for_sensor_map_t = std::multimap<sensor_id_t, any_record_ptr>;
+    /// sensor id-to-PV mapping
     PVs_for_sensor_map_t pv_map_;
+
+    /** Functions to call for a given record type. */
+    struct FunctionTable {
+       void (Device::*fill)(::dbCommon *, const any_sensor_ptr &);
+    };
+
+    static std::map<RecordType, FunctionTable> record_functions_;
+    /** Find PVs defined for an SDR and fill in their metadata. */
+    void fillPVsFromSDR(const sensor_id_t &_id, const any_sensor_ptr &_sdr);
 }; // class Device
 
 } // namespace IPMIIOC

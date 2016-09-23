@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <epicsTypes.h>
+#include <map>
 #include <memory>
 #include <string>
 
@@ -30,13 +31,13 @@ struct result_t {
 
 typedef uint8_t slave_addr_t;
 
+/** The data we use to identify a sensor in the system. */
 struct sensor_id_t {
-  sensor_id_t(slave_addr_t _ipmb, uint8_t _sensor, uint8_t _entity, uint8_t _inst, const std::string& _name);
+  sensor_id_t(slave_addr_t _ipmb, uint8_t _entity, uint8_t _inst, const std::string& _name);
+  /** Construct from an EPICS link. */
   explicit sensor_id_t(const ::link& _loc);
 
   slave_addr_t ipmb;
-  uint8_t sensor;
-  bool sensor_set;
   uint8_t entity;
   uint8_t instance;
   std::string name;
@@ -47,10 +48,9 @@ struct sensor_id_t {
   std::string prettyPrint() const;
 };
 
+
 struct any_sensor_ptr {
    uint8_t type;
-   /// last reading was usable.
-   bool good{true};
 
    explicit any_sensor_ptr();
    explicit any_sensor_ptr(::sdr_record_full_sensor* _p);
@@ -58,6 +58,7 @@ struct any_sensor_ptr {
 
    /// Is a record available?
    operator bool() const;
+
    operator ::sdr_record_full_sensor*() const;
    operator ::sdr_record_common_sensor*() const;
    operator ::sdr_record_compact_sensor*() const;
@@ -67,6 +68,24 @@ struct any_sensor_ptr {
 private:
    std::shared_ptr<::sdr_record_common_sensor> data_ptr;
 };
+
+
+/** Current state of the sensor.
+  * Can be online, not found, read error.
+  */
+struct sensor_status_t {
+   /** Id of the sensor on the bus.
+    *
+    * Only valid if any_sensor_ptr().
+    */
+   uint8_t sensor_id { 0U };
+   any_sensor_ptr sdr_record {};
+   /** Last reading has been valid. */
+   bool good { false };
+};
+
+/** Current status for each sensor. */
+using status_map_t = std::map<sensor_id_t, sensor_status_t>;
 
 /** Enum of all supported EPICS record types. */
 enum class RecordType {
