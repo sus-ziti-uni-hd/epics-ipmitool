@@ -524,19 +524,19 @@ void Device::initInputRecord(::dbCommon* _rec, const ::link& _inp) {
 }
 
 
-void Device::initRecordDesc(::dbCommon* _rec, const any_sensor_ptr& _sdr) {
-  if (::strlen(_rec->desc) == 0) {
+void Device::initRecordDesc(const any_record_ptr& _rec, const any_sensor_ptr& _sdr) {
+  if (::strlen(_rec()->desc) == 0) {
     switch (_sdr.type) {
       case SDR_RECORD_TYPE_FULL_SENSOR:
-        strncpy(_rec->desc, reinterpret_cast<const char*>(static_cast<::sdr_record_full_sensor*>(_sdr)->id_string), 40);
+        strncpy(_rec()->desc, reinterpret_cast<const char*>(static_cast<::sdr_record_full_sensor*>(_sdr)->id_string), 40);
         break;
       case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        strncpy(_rec->desc, reinterpret_cast<const char*>(static_cast<::sdr_record_compact_sensor*>(_sdr)->id_string), 40);
+        strncpy(_rec()->desc, reinterpret_cast<const char*>(static_cast<::sdr_record_compact_sensor*>(_sdr)->id_string), 40);
         break;
       default:
         std::cerr << "Unexpected type 0x" << std::hex << +_sdr()->sensor.type << std::endl;
     }
-    _rec->desc[40] = '\0';
+    _rec()->desc[40] = '\0';
   } // if
 }
 
@@ -548,9 +548,9 @@ void Device::initAiRecord(::aiRecord* _pai) {
   callbackSetCallback(aiCallback, &static_cast<dpvt_t*>(_pai->dpvt)->cb);
 }
 
-void Device::fillAiRecord(::dbCommon* _rec, const any_sensor_ptr& i) {
+void Device::fillAiRecord(const any_record_ptr& _rec, const any_sensor_ptr& i) {
   initRecordDesc(_rec, i);
-  auto _pai = reinterpret_cast<::aiRecord *>(_rec);
+  auto _pai = static_cast<::aiRecord *>(_rec);
   SuS_LOG_STREAM(finest, log_id(), "SENSOR " << +_pai->inp.value.abio.card);
   SuS_LOG_STREAM(finest, log_id(), "  THRESH "
                  << +i()->mask.type.threshold.read.unr << " "
@@ -651,9 +651,9 @@ void Device::initMbbiRecord(::mbbiRecord* _pmbbi) {
   callbackSetCallback(mbbiCallback, &static_cast<dpvt_t*>(_pmbbi->dpvt)->cb);
 }
 
-void Device::fillMbbiRecord(::dbCommon* _rec, const any_sensor_ptr& i) {
+void Device::fillMbbiRecord(const any_record_ptr& _rec, const any_sensor_ptr& i) {
   initRecordDesc(_rec, i);
-  auto _pmbbi = reinterpret_cast<::mbbiRecord*>(_rec);
+  auto _pmbbi = static_cast<::mbbiRecord*>(_rec);
   static const std::array<epicsUInt32 mbbiRecord::*, 16> mbbiValues = {
     &mbbiRecord::zrvl, &mbbiRecord::onvl, &mbbiRecord::twvl, &mbbiRecord::thvl,
     &mbbiRecord::frvl, &mbbiRecord::fvvl, &mbbiRecord::sxvl, &mbbiRecord::svvl,
@@ -804,7 +804,7 @@ void Device::fillPVsFromSDR(const sensor_id_t &_id, const any_sensor_ptr &_sdr) 
   const auto range = pv_map_.equal_range(_id);
   for (auto pv = range.first; pv != range.second; ++pv) {
      const auto &fill = record_functions_[pv->second.type].fill;
-     if (fill) (this->*fill)(pv->second(), _sdr);
+     if (fill) (this->*fill)(pv->second, _sdr);
   }
 }
 

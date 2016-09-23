@@ -39,7 +39,7 @@ class Device {
 
     void initAiRecord(::aiRecord* _rec);
     /** Update the record with information from the SDR. */
-    void fillAiRecord(::dbCommon* _rec, const any_sensor_ptr &_sdr);
+    void fillAiRecord(const any_record_ptr &_rec, const any_sensor_ptr &_sdr);
     bool readAiSensor(::aiRecord* _rec);
 
     void initMbbiDirectRecord(::mbbiDirectRecord* _rec);
@@ -47,7 +47,7 @@ class Device {
 
     void initMbbiRecord(::mbbiRecord* _rec);
     /** Update the record with information from the SDR. */
-    void fillMbbiRecord(::dbCommon* _rec, const any_sensor_ptr &_i);
+    void fillMbbiRecord(const any_record_ptr &_rec, const any_sensor_ptr &_i);
     bool readMbbiSensor(::mbbiRecord* _rec);
 
     /** Full scan, all IPMBs we can find. */
@@ -97,7 +97,7 @@ class Device {
     status_map_t sensors_;
 
     void initInputRecord(::dbCommon* _rec, const ::link& _inp);
-    void initRecordDesc(::dbCommon* _rec, const any_sensor_ptr& _sdr);
+    void initRecordDesc(const any_record_ptr& _rec, const any_sensor_ptr& _sdr);
 
     short id_;
     ::epicsMutex mutex_;
@@ -115,7 +115,7 @@ class Device {
 
     /** Functions to call for a given record type. */
     struct FunctionTable {
-       void (Device::*fill)(::dbCommon *, const any_sensor_ptr &);
+       void (Device::*fill)(const any_record_ptr &, const any_sensor_ptr &);
     };
 
     static std::map<RecordType, FunctionTable> record_functions_;
