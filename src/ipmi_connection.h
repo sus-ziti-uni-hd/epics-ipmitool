@@ -28,6 +28,9 @@ void ipmiScanDevice(int _id);
 
 void ipmiDumpDatabase(int _id, const char* _file);
 
+/** Start first scan over active IPMBs. */
+void ipmiInitialScan();
+
 #ifdef __cplusplus
 }
 #endif

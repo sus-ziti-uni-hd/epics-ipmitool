@@ -106,4 +106,11 @@ extern "C" {
     }
     it->second->dumpDatabase(_file);
   }
+
+
+  void ipmiInitialScan() {
+     for(const auto& i : IPMIIOC::s_interfaces) {
+        i.second->scanActiveIPMBs();
+     }
+  }
 } // extern "C"
