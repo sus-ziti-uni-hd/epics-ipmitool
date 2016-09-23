@@ -83,8 +83,11 @@ struct any_record_ptr {
    any_record_ptr(::mbbiRecord *_rec);
 
    operator ::aiRecord*() const;
+   operator ::dbCommon*() const;
    operator ::mbbiDirectRecord*() const;
    operator ::mbbiRecord*() const;
+
+   ::dbCommon* operator()() const;
 
    std::string pvName() const;
 

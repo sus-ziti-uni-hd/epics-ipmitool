@@ -111,6 +111,10 @@ any_record_ptr::operator ::aiRecord*() const {
    return data_ptr.ai;
 }
 
+any_record_ptr::operator ::dbCommon*() const {
+   return data_ptr.common;
+}
+
 any_record_ptr::operator ::mbbiDirectRecord*() const {
    assert(type == RecordType::mbbiDirect);
    return data_ptr.mbbiDirect;
@@ -119,6 +123,10 @@ any_record_ptr::operator ::mbbiDirectRecord*() const {
 any_record_ptr::operator ::mbbiRecord*() const {
    assert(type == RecordType::mbbi);
    return data_ptr.mbbi;
+}
+
+::dbCommon *any_record_ptr::operator()() const {
+   return data_ptr.common;
 }
 
 std::string any_record_ptr::pvName() const {
