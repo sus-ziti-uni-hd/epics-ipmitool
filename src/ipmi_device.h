@@ -97,7 +97,10 @@ class Device {
     ReaderThread* readerThread_;
     uint8_t local_addr_;
 
+    /// used during full scan.
     std::set<slave_addr_t> slaves_;
+    /// IPMBs with at least one defined PV.
+    std::set<slave_addr_t> active_ipmbs_;
 }; // class Device
 
 } // namespace IPMIIOC
