@@ -84,7 +84,7 @@ struct sensor_status_t {
    uint8_t sensor_id { 0U };
    any_sensor_ptr sdr_record {};
    /** Last reading has been valid. */
-   bool good { false };
+   std::shared_ptr<bool> good { std::make_shared<bool>(false) };
 };
 
 /** Current status for each sensor. */

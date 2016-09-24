@@ -472,7 +472,7 @@ void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec
   }
   i.sdr_record = any_sensor_ptr{_rec};
   i.sensor_id = _rec->cmn.keys.sensor_num;
-  i.good = true;
+  *i.good = true;
   std::stringstream ss;
   ss << "  found full " << id.prettyPrint()
      << " (0x" << std::hex << std::setw(2) << std::setfill('0') << +_rec->cmn.sensor.type;
@@ -495,7 +495,7 @@ void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor
   }
   i.sdr_record = any_sensor_ptr{_rec};
   i.sensor_id = _rec->cmn.keys.sensor_num;
-  i.good = true;
+  *i.good = true;
   std::stringstream ss;
   ss << "  found compact " << id.prettyPrint()
      << " (0x" << std::hex << std::setw(2) << std::setfill('0') << +_rec->cmn.sensor.type;
@@ -515,8 +515,9 @@ void Device::initInputRecord(::dbCommon* _rec, const ::link& _inp) {
   dpvt_t* priv = new dpvt_t;
   priv->pvid = nextid++;
   callbackSetPriority(priorityLow, &priv->cb);
+  auto &i = sensors_[id];
   callback_private_t* cb_priv = new callback_private_t{
-    reinterpret_cast< ::dbCommon*>(_rec), id, readerThread_, &sensors_[id].good};
+    reinterpret_cast< ::dbCommon*>(_rec), id, readerThread_, i.good.get()};
   callbackSetUser(cb_priv, &priv->cb);
   priv->cb.timer = NULL;
   _rec->dpvt = priv;
