@@ -276,7 +276,7 @@ bool Device::connect(const std::string& _hostname, const std::string& _username,
   SuS_LOG_STREAM(config, log_id(), "Connecting to '" << _hostname << "'.");
   intf_ = ::ipmi_intf_load(const_cast<char*>(_proto.c_str()));
   if (!intf_) {
-    SuS_LOG(severe, log_id(), "Cannot load selected (lan/lanplus/...) interface.");
+    SuS_LOG_PRINTF(severe, log_id(), "Cannot load interface '%s'.", _proto.c_str());
     return false;
   }
 
