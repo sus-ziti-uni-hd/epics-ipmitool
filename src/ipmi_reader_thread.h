@@ -15,7 +15,7 @@ class ReaderThread {
     ReaderThread(Device* _d);
     ~ReaderThread();
 
-    void enqueueSensorRead(const Device::query_job_t& _sensor);
+    void enqueueSensorRead(const Device::query_job_t&& _sensor);
     result_t findResult(const unsigned _pvid);
 
     void start();

@@ -1,6 +1,7 @@
 #include <aiRecord.h>
 #include <devSup.h>
 #include <epicsExport.h>
+#include <initHooks.h>
 #include <mbbiRecord.h>
 #include <mbbiDirectRecord.h>
 #include <stdlib.h>
@@ -9,7 +10,23 @@
 
 #include "ipmi_connection.h"
 
+static void ipmiInitHook(initHookState _state)
+{
+   // TODO: decide when to run
+   if (_state != initHookAtIocRun) {
+      return;
+   }
+   ipmiInitialScan();
+}
+
+/** Run from every record. */
 static long init(int after) {
+   // whenever a record is defined, we will need to receive the callback.
+   static int initRun = 0;
+   if (!initRun) {
+      initHookRegister(ipmiInitHook);
+   }
+   initRun = 1;
    return 0;
 }
 

@@ -43,6 +43,12 @@ std::atomic<unsigned> nextid(0U);
 
 namespace IPMIIOC {
 
+std::map<RecordType, Device::FunctionTable> Device::record_functions_ = {
+   { RecordType::ai, { .fill = &Device::fillAiRecord } },
+   { RecordType::mbbiDirect, { .fill = &Device::initRecordDesc } },
+   { RecordType::mbbi, { .fill = &Device::fillMbbiRecord } },
+};
+
 Device::Device(short _id) {
   id_ = _id;
   readerThread_=NULL;
@@ -70,9 +76,8 @@ void Device::aiCallback(::CALLBACK* _cb) {
 
     if (*priv->good) {
        *priv->good = false;
-      SuS_LOG_PRINTF(warning, log_id(), "sensor 0x%02x/0x%02x: Read invalid.", priv->sensor.ipmb, priv->sensor.sensor);
+      SuS_LOG_PRINTF(warning, log_id(), "sensor 0x%02x/%s: Read invalid.", priv->sensor.ipmb, priv->sensor.name.c_str());
     } // if
-
     return;
   } // if
 
@@ -87,7 +92,7 @@ void Device::aiCallback(::CALLBACK* _cb) {
   dbScanUnlock((dbCommon*)priv->rec);
   if (!*priv->good) {
      *priv->good = true;
-     SuS_LOG_PRINTF(info, log_id(), "sensor 0x%02x/0x%02x: Read valid again.", priv->sensor.ipmb, priv->sensor.sensor);
+     SuS_LOG_PRINTF(info, log_id(), "sensor 0x%02x/%s: Read valid again.", priv->sensor.ipmb, priv->sensor.name.c_str());
   } // if
 } // Device::aiCallback
 
@@ -126,9 +131,8 @@ void Device::mbbiDirectCallback(::CALLBACK* _cb) {
 
     if (*priv->good) {
        *priv->good = false;
-      SuS_LOG_PRINTF(warning, log_id(), "sensor 0x%02x/0x%02x: Read invalid.", priv->sensor.ipmb, priv->sensor.sensor);
+      SuS_LOG_PRINTF(warning, log_id(), "sensor 0x%02x/%s: Read invalid.", priv->sensor.ipmb, priv->sensor.name.c_str());
     } // if
-
     return;
   } // if
 
@@ -144,7 +148,7 @@ void Device::mbbiDirectCallback(::CALLBACK* _cb) {
   dbScanUnlock((dbCommon*)priv->rec);
   if (!*priv->good) {
      *priv->good = true;
-     SuS_LOG_PRINTF(info, log_id(), "sensor 0x%02x/0x%02x: Read valid again.", priv->sensor.ipmb, priv->sensor.sensor);
+     SuS_LOG_PRINTF(info, log_id(), "sensor 0x%02x/%s: Read valid again.", priv->sensor.ipmb, priv->sensor.name.c_str());
   } // if
 } // Device::mbbiDirectCallback
 
@@ -183,9 +187,8 @@ void Device::mbbiCallback(::CALLBACK* _cb) {
 
     if (*priv->good) {
        *priv->good = false;
-      SuS_LOG_PRINTF(warning, log_id(), "sensor 0x%02x/0x%02x: Read invalid.", priv->sensor.ipmb, priv->sensor.sensor);
+      SuS_LOG_PRINTF(warning, log_id(), "sensor 0x%02x/%s: Read invalid.", priv->sensor.ipmb, priv->sensor.name.c_str());
     } // if
-
     return;
   } // if
 
@@ -202,7 +205,7 @@ void Device::mbbiCallback(::CALLBACK* _cb) {
   dbScanUnlock((dbCommon*)priv->rec);
   if (!*priv->good) {
      *priv->good = true;
-     SuS_LOG_PRINTF(info, log_id(), "sensor 0x%02x/0x%02x: Read valid again.", priv->sensor.ipmb, priv->sensor.sensor);
+     SuS_LOG_PRINTF(info, log_id(), "sensor 0x%02x/%s: Read valid again.", priv->sensor.ipmb, priv->sensor.name.c_str());
   } // if
 } // Device::mbbiCallback
 
@@ -228,15 +231,16 @@ bool Device::mbbiQuery(const sensor_id_t& _sensor, result_t& _result) {
 const ::sensor_reading* Device::ipmiQuery(const sensor_id_t& _sensor) {
   const auto& i = sensors_.find(_sensor);
   if (i == sensors_.end()) {
-    SuS_LOG_PRINTF(warning, log_id(), "sensor %s not found.", _sensor.prettyPrint().c_str());
-    return nullptr;
+    SuS_LOG_PRINTF(severe, log_id(), "Sensor %s not found.", _sensor.prettyPrint().c_str());
+    assert(false);
   }
 
   intf_->target_addr = _sensor.ipmb;
   // returns a pointer to an internal variable
+  // TODO: global lock!
   const ::sensor_reading* const sr = ::ipmi_sdr_read_sensor_value(intf_,
-                                     i->second,
-                                     i->second.type, 2 /* precision */);
+                                     i->second.sdr_record,
+                                     i->second.sdr_record.type, 2 /* precision */);
   return sr;
 }
 
@@ -318,41 +322,53 @@ void Device::detectSensors() {
   SuS_LOG_STREAM(fine, log_id(), "Total sensor count: " << sensors_.size());
 
   for (const auto& i : sensors_) {
+    if (!i.second.sdr_record()) {
+       // only defined by a PV
+       continue;
+    }
     std::stringstream ss;
     ss << "sensor 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.first.ipmb
-       << "/0x" << std::hex << std::setw(2) << std::setfill('0') << +i.first.sensor;
-      
+       << "/0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second.sensor_id;
     char name[17];// id_string does not need to be zero terminated... check length!
     int idlen;// actually, we should convert it to ASCII first, if its bcdplus or 6 bit -- TODO
     memset(name, 0, sizeof(name));
-      
-    switch (i.second.type) {
+
+    switch (i.second.sdr_record.type) {
       case SDR_RECORD_TYPE_FULL_SENSOR:
-        idlen = static_cast<::sdr_record_full_sensor*>(i.second)->id_code & 0x1f;
+        idlen = static_cast<::sdr_record_full_sensor*>(i.second.sdr_record)->id_code & 0x1f;
         idlen = idlen < sizeof(name) ? idlen : sizeof(name) - 1;
-        memcpy(name, static_cast<::sdr_record_full_sensor*>(i.second)->id_string, idlen);
+        memcpy(name, static_cast<::sdr_record_full_sensor*>(i.second.sdr_record)->id_string, idlen);
         ss << " : full '" << name
-                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second()->event_type
-                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second()->sensor.type;
+                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second.sdr_record()->event_type
+                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second.sdr_record()->sensor.type;
         break;
       case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        idlen = static_cast<::sdr_record_compact_sensor*>(i.second)->id_code & 0x1f;
+        idlen = static_cast<::sdr_record_compact_sensor*>(i.second.sdr_record)->id_code & 0x1f;
         idlen = idlen < sizeof(name) ? idlen : sizeof(name) - 1;
-        memcpy(name, static_cast<::sdr_record_compact_sensor*>(i.second)->id_string, idlen);
+        memcpy(name, static_cast<::sdr_record_compact_sensor*>(i.second.sdr_record)->id_string, idlen);
         ss << " : compact '" << name
-                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second()->event_type
-                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second()->sensor.type;
+                << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second.sdr_record()->event_type
+                << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second.sdr_record()->sensor.type;
         break;
       default:
-        ss << " : unexpected type 0x" << std::hex << +i.second.type;
+        ss << " : unexpected type 0x" << std::hex << +i.second.sdr_record.type;
     }
-    if (i.second()->sensor.type <= SENSOR_TYPE_MAX)
-      ss << " (" << ::sensor_type_desc[i.second()->sensor.type] << ")";
+    if (i.second.sdr_record()->sensor.type <= SENSOR_TYPE_MAX)
+      ss << " (" << ::sensor_type_desc[i.second.sdr_record()->sensor.type] << ")";
     ss << "." << std::ends;
 
     SuS_LOG(finer, log_id(), ss.str());
   } // for i
 } // Device::detectSensors
+
+
+void Device::scanActiveIPMBs() {
+  if (!intf_) {
+    SuS_LOG(warning, log_id(), "Not scanning: not connected.");
+    return;
+  }
+  for (const auto i : active_ipmbs_) iterateSDRs(i);
+}
 
 
 void Device::dumpDatabase(const std::string& _file) {
@@ -372,17 +388,21 @@ void Device::dumpDatabase(const std::string& _file) {
           << "# Please update the PV names and add SCAN fields as required." << std::endl;
 
   for (const auto& sensor : sensors_) {
+    if (!sensor.second.sdr_record()) {
+       // only defined by a PV
+       continue;
+    }
     std::string name;
-    switch (sensor.second.type) {
+    switch (sensor.second.sdr_record.type) {
       case SDR_RECORD_TYPE_FULL_SENSOR:
-        name = reinterpret_cast<const char*>(static_cast<::sdr_record_full_sensor*>(sensor.second)->id_string);
+        name = reinterpret_cast<const char*>(static_cast<::sdr_record_full_sensor*>(sensor.second.sdr_record)->id_string);
         break;
       case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        name = reinterpret_cast<const char*>(static_cast<::sdr_record_compact_sensor*>(sensor.second)->id_string);
+        name = reinterpret_cast<const char*>(static_cast<::sdr_record_compact_sensor*>(sensor.second.sdr_record)->id_string);
         break;
       default:
         std::stringstream ss;
-        ss << "unexpected type 0x" << std::hex << +sensor.second.type;
+        ss << "unexpected type 0x" << std::hex << +sensor.second.sdr_record.type;
         name = ss.str();
     }
 
@@ -392,13 +412,17 @@ void Device::dumpDatabase(const std::string& _file) {
 
     // take a reading to check the return value type.
     const ::sensor_reading* const sr { ipmiQuery(sensor.first) };
+    if (!sr) {
+       // TODO
+       continue;
+    }
     const std::string rectype { sr->s_has_analog_value ? "ai" : "mbbi" };
     of << std::endl
             << "# " << name
-            << ", event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor.second()->event_type
-            << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor.second()->sensor.type;
-    if (sensor.second()->sensor.type <= SENSOR_TYPE_MAX)
-      of << " (" << ::sensor_type_desc[sensor.second()->sensor.type] << ")";
+            << ", event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor.second.sdr_record()->event_type
+            << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +sensor.second.sdr_record()->sensor.type;
+    if (sensor.second.sdr_record()->sensor.type <= SENSOR_TYPE_MAX)
+      of << " (" << ::sensor_type_desc[sensor.second.sdr_record()->sensor.type] << ")";
 
     of << std::endl
             << "record(" << rectype << ", \"" << pvname << "\")" << std::endl
@@ -439,9 +463,16 @@ void Device::find_ipmb() {
 } // Device::find_ipmb
 
 void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec) {
-  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num, _rec->cmn.entity.id,  _rec->cmn.entity.instance, reinterpret_cast<char *>(_rec->id_string));
-  any_sensor_ptr any{_rec};
-  sensors_.emplace(id, any);
+  sensor_id_t id{_addr, _rec};
+  // creates entry, if not found
+  auto &i = sensors_[id];
+  if (i.sdr_record()) {
+     // already known
+     return;
+  }
+  i.sdr_record = any_sensor_ptr{_rec};
+  i.sensor_id = _rec->cmn.keys.sensor_num;
+  *i.good = true;
   std::stringstream ss;
   ss << "  found full " << id.prettyPrint()
      << " (0x" << std::hex << std::setw(2) << std::setfill('0') << +_rec->cmn.sensor.type;
@@ -449,13 +480,22 @@ void Device::handleFullSensor(slave_addr_t _addr, ::sdr_record_full_sensor* _rec
     ss << " => " << ::sensor_type_desc[_rec->cmn.sensor.type];
   ss << ")." << std::ends;
   SuS_LOG(finest, log_id(), ss.str());
+
+  fillPVsFromSDR(id, i.sdr_record);
 } // Device::handleFullSensor
 
 
 void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor* _rec) {
-  sensor_id_t id(_addr, _rec->cmn.keys.sensor_num, _rec->cmn.entity.id,  _rec->cmn.entity.instance, reinterpret_cast<char *>(_rec->id_string));
-  any_sensor_ptr any{_rec};
-  sensors_.emplace(id, any);
+  sensor_id_t id{_addr, _rec};
+  // creates entry, if not found
+  auto &i = sensors_[id];
+  if (i.sdr_record()) {
+     // already known
+     return;
+  }
+  i.sdr_record = any_sensor_ptr{_rec};
+  i.sensor_id = _rec->cmn.keys.sensor_num;
+  *i.good = true;
   std::stringstream ss;
   ss << "  found compact " << id.prettyPrint()
      << " (0x" << std::hex << std::setw(2) << std::setfill('0') << +_rec->cmn.sensor.type;
@@ -463,49 +503,54 @@ void Device::handleCompactSensor(slave_addr_t _addr, ::sdr_record_compact_sensor
     ss << " => " << ::sensor_type_desc[_rec->cmn.sensor.type];
   ss << ")." << std::ends;
   SuS_LOG(finest, log_id(), ss.str());
+
+  fillPVsFromSDR(id, i.sdr_record);
 } // Device::handleCompactSensor
 
 
-Device::any_sensor_ptr Device::initInputRecord(::dbCommon* _rec, const ::link& _inp) {
-  sensor_id_t id(_inp);
-  const auto& i = sensors_.find(id);
-  if (i == sensors_.end()) {
-    SuS_LOG_PRINTF(warning, log_id(), "sensor %s not found.", id.prettyPrint().c_str());
-    return any_sensor_ptr();
-  } // if
-  // id doesn't know its sensor number, but the cached version should.
-  assert(i->first.sensor_set);
+void Device::initInputRecord(::dbCommon* _rec, const ::link& _inp) {
+  sensor_id_t id{_inp};
+  active_ipmbs_.insert(id.ipmb);
 
   dpvt_t* priv = new dpvt_t;
   priv->pvid = nextid++;
   callbackSetPriority(priorityLow, &priv->cb);
-  callback_private_t* cb_priv = new callback_private_t(
-    reinterpret_cast< ::dbCommon*>(_rec), i->first, readerThread_, &i->second.good);
+  auto &i = sensors_[id];
+  callback_private_t* cb_priv = new callback_private_t{
+    reinterpret_cast< ::dbCommon*>(_rec), id, readerThread_, i.good.get()};
   callbackSetUser(cb_priv, &priv->cb);
   priv->cb.timer = NULL;
   _rec->dpvt = priv;
-
-  if (strlen(_rec->desc) == 0) {
-    switch (i->second.type) {
-      case SDR_RECORD_TYPE_FULL_SENSOR:
-        strncpy(_rec->desc, reinterpret_cast<const char*>(static_cast<::sdr_record_full_sensor*>(i->second)->id_string), 40);
-        break;
-      case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        strncpy(_rec->desc, reinterpret_cast<const char*>(static_cast<::sdr_record_compact_sensor*>(i->second)->id_string), 40);
-        break;
-      default:
-        std::cerr << "Unexpected type 0x" << std::hex << +i->second()->sensor.type << std::endl;
-    }
-    _rec->desc[40] = '\0';
-  } // if
-  return i->second;
 }
 
+
+void Device::initRecordDesc(const any_record_ptr& _rec, const any_sensor_ptr& _sdr) {
+  if (::strlen(_rec()->desc) == 0) {
+    switch (_sdr.type) {
+      case SDR_RECORD_TYPE_FULL_SENSOR:
+        strncpy(_rec()->desc, reinterpret_cast<const char*>(static_cast<::sdr_record_full_sensor*>(_sdr)->id_string), 40);
+        break;
+      case SDR_RECORD_TYPE_COMPACT_SENSOR:
+        strncpy(_rec()->desc, reinterpret_cast<const char*>(static_cast<::sdr_record_compact_sensor*>(_sdr)->id_string), 40);
+        break;
+      default:
+        std::cerr << "Unexpected type 0x" << std::hex << +_sdr()->sensor.type << std::endl;
+    }
+    _rec()->desc[40] = '\0';
+  } // if
+}
+
+
 void Device::initAiRecord(::aiRecord* _pai) {
-  auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pai), _pai->inp);
+  initInputRecord(reinterpret_cast< ::dbCommon*>(_pai), _pai->inp);
+  pv_map_.emplace(sensor_id_t{_pai->inp}, _pai);
   if(_pai->dpvt==NULL) return;
   callbackSetCallback(aiCallback, &static_cast<dpvt_t*>(_pai->dpvt)->cb);
+}
 
+void Device::fillAiRecord(const any_record_ptr& _rec, const any_sensor_ptr& i) {
+  initRecordDesc(_rec, i);
+  auto _pai = static_cast<::aiRecord *>(_rec);
   SuS_LOG_STREAM(finest, log_id(), "SENSOR " << +_pai->inp.value.abio.card);
   SuS_LOG_STREAM(finest, log_id(), "  THRESH "
                  << +i()->mask.type.threshold.read.unr << " "
@@ -588,21 +633,27 @@ void Device::initAiRecord(::aiRecord* _pai) {
       if(c) strncpy(_pai->egu,c,sizeof(_pai->egu));
     }
   }
-} // Device::initAiRecord
+} // Device::fillAiRecord
 
 
 void Device::initMbbiDirectRecord(::mbbiDirectRecord* _pmbbi) {
-  auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
+  initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
+  pv_map_.emplace(sensor_id_t{_pmbbi->inp}, _pmbbi);
   if(_pmbbi->dpvt==NULL) return;
   callbackSetCallback(mbbiDirectCallback, &static_cast<dpvt_t*>(_pmbbi->dpvt)->cb);
 } // Device::initMbbiDirectRecord
 
 
 void Device::initMbbiRecord(::mbbiRecord* _pmbbi) {
-  auto i = initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
+  initInputRecord(reinterpret_cast< ::dbCommon*>(_pmbbi), _pmbbi->inp);
+  pv_map_.emplace(sensor_id_t{_pmbbi->inp}, _pmbbi);
   if(_pmbbi->dpvt==NULL) return;
   callbackSetCallback(mbbiCallback, &static_cast<dpvt_t*>(_pmbbi->dpvt)->cb);
+}
 
+void Device::fillMbbiRecord(const any_record_ptr& _rec, const any_sensor_ptr& i) {
+  initRecordDesc(_rec, i);
+  auto _pmbbi = static_cast<::mbbiRecord*>(_rec);
   static const std::array<epicsUInt32 mbbiRecord::*, 16> mbbiValues = {
     &mbbiRecord::zrvl, &mbbiRecord::onvl, &mbbiRecord::twvl, &mbbiRecord::thvl,
     &mbbiRecord::frvl, &mbbiRecord::fvvl, &mbbiRecord::sxvl, &mbbiRecord::svvl,
@@ -637,7 +688,7 @@ void Device::initMbbiRecord(::mbbiRecord* _pmbbi) {
     strncpy(_pmbbi->*mbbiStrings[evt->offset], evt->desc, 26);
     (_pmbbi->*mbbiStrings[evt->offset])[25] = '\0';
   }
-} // Device::initMbbiRecord
+} // Device::fillMbbiRecord
 
 
 void Device::iterateSDRs(slave_addr_t _addr, bool _force_internal) {
@@ -698,7 +749,7 @@ bool Device::readAiSensor(::aiRecord* _pai) {
   if (!_pai->pact) {
     _pai->pact = TRUE;
     dpvt_t* priv = static_cast<dpvt_t*>(_pai->dpvt);
-    readerThread_->enqueueSensorRead(query_job_t(_pai->inp, &Device::aiQuery, priv->pvid));
+    readerThread_->enqueueSensorRead(query_job_t{_pai->inp, &Device::aiQuery, priv->pvid});
     ::callbackRequestDelayed(&priv->cb, 10.0);
     return true;
     // start async. operation
@@ -749,43 +800,18 @@ bool Device::readMbbiSensor(::mbbiRecord* _pmbbi) {
 } // Device::readMbbiSensor
 
 
+void Device::fillPVsFromSDR(const sensor_id_t &_id, const any_sensor_ptr &_sdr) {
+  const auto range = pv_map_.equal_range(_id);
+  for (auto pv = range.first; pv != range.second; ++pv) {
+     const auto &fill = record_functions_[pv->second.type].fill;
+     if (fill) (this->*fill)(pv->second, _sdr);
+  }
+}
+
 Device::query_job_t::query_job_t(const ::link& _loc, query_func_t _f, unsigned _pvid)
   : sensor(_loc), query_func(_f), pvid(_pvid) {
 } // Device::query_job_t constructor
 
-
-Device::any_sensor_ptr::any_sensor_ptr()
-   : type{0U}, data_ptr{nullptr}
-{}
-
-Device::any_sensor_ptr::any_sensor_ptr(::sdr_record_full_sensor* _p)
-   : type{SDR_RECORD_TYPE_FULL_SENSOR}, data_ptr{std::shared_ptr<::sdr_record_common_sensor>(&_p->cmn, [](::sdr_record_common_sensor *p){::free(p);})}
-{}
-
-Device::any_sensor_ptr::any_sensor_ptr(::sdr_record_compact_sensor* _p)
-   : type{SDR_RECORD_TYPE_COMPACT_SENSOR}, data_ptr{std::shared_ptr<::sdr_record_common_sensor>(&_p->cmn, [](::sdr_record_common_sensor *p){::free(p);})}
-{}
-
-Device::any_sensor_ptr::operator ::sdr_record_full_sensor*() const
-{
-   assert(type == SDR_RECORD_TYPE_FULL_SENSOR);
-   return reinterpret_cast<::sdr_record_full_sensor*>(data_ptr.get());
-}
-
-Device::any_sensor_ptr::operator ::sdr_record_common_sensor*() const
-{
-   return data_ptr.get();
-}
-
-Device::any_sensor_ptr::operator ::sdr_record_compact_sensor*() const
-{
-   assert(type == SDR_RECORD_TYPE_COMPACT_SENSOR);
-   return reinterpret_cast<::sdr_record_compact_sensor*>(data_ptr.get());
-}
-
-::sdr_record_common_sensor *Device::any_sensor_ptr::operator()() const {
-   return data_ptr.get();
-}
 
 } // namespace IPMIIOC
 

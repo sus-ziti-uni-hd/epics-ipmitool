@@ -24,15 +24,15 @@ void ReaderThread::do_query(const Device::query_job_t& _sensor) {
   result_t result;
   if ((device_->*_sensor.query_func)(_sensor.sensor, result)) {
     ::pthread_mutex_lock(&results_mutex_);
-    results_[_sensor.pvid] = result;
+    results_.emplace(_sensor.pvid, result);
     ::pthread_mutex_unlock(&results_mutex_);
   } // if
 } // ReaderThread::do_query
 
 
-void ReaderThread::enqueueSensorRead(const Device::query_job_t& _sensor) {
+void ReaderThread::enqueueSensorRead(const Device::query_job_t&& _sensor) {
   ::pthread_mutex_lock(&mutex_);
-  queries_.emplace_back(_sensor);
+  queries_.emplace_back(std::move(_sensor));
   ::pthread_cond_signal(&cond_);
   ::pthread_mutex_unlock(&mutex_);
 } // ReaderThread::enqueue

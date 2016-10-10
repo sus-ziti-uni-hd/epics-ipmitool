@@ -38,16 +38,23 @@ class Device {
                  const std::string& _password, const std::string& _proto, int _privlevel);
 
     void initAiRecord(::aiRecord* _rec);
+    /** Update the record with information from the SDR. */
+    void fillAiRecord(const any_record_ptr &_rec, const any_sensor_ptr &_sdr);
     bool readAiSensor(::aiRecord* _rec);
 
     void initMbbiDirectRecord(::mbbiDirectRecord* _rec);
     bool readMbbiDirectSensor(::mbbiDirectRecord* _rec);
 
     void initMbbiRecord(::mbbiRecord* _rec);
+    /** Update the record with information from the SDR. */
+    void fillMbbiRecord(const any_record_ptr &_rec, const any_sensor_ptr &_i);
     bool readMbbiSensor(::mbbiRecord* _rec);
 
+    /** Full scan, all IPMBs we can find. */
     void detectSensors();
     void dumpDatabase(const std::string& _file);
+    /** Smart scan: Only IPMBs with defined PVs. */
+    void scanActiveIPMBs();
 
     bool ping();
 
@@ -87,35 +94,33 @@ class Device {
 
     ::ipmi_intf* intf_ = nullptr;
 
-    struct any_sensor_ptr {
-         const uint8_t type;
-         /// last reading was usable.
-         bool good{true};
+    status_map_t sensors_;
 
-         explicit any_sensor_ptr();
-         explicit any_sensor_ptr(::sdr_record_full_sensor* _p);
-         explicit any_sensor_ptr(::sdr_record_compact_sensor* _p);
-
-         operator ::sdr_record_full_sensor*() const;
-         operator ::sdr_record_common_sensor*() const;
-         operator ::sdr_record_compact_sensor*() const;
-
-         ::sdr_record_common_sensor* operator()() const;
-
-      private:
-         std::shared_ptr<::sdr_record_common_sensor> data_ptr;
-    };
-    typedef std::map<sensor_id_t, any_sensor_ptr> sensor_list_t;
-    sensor_list_t sensors_;
-
-    any_sensor_ptr initInputRecord(::dbCommon* _rec, const ::link& _inp);
+    void initInputRecord(::dbCommon* _rec, const ::link& _inp);
+    void initRecordDesc(const any_record_ptr& _rec, const any_sensor_ptr& _sdr);
 
     short id_;
     ::epicsMutex mutex_;
     ReaderThread* readerThread_;
     uint8_t local_addr_;
 
+    /// used during full scan.
     std::set<slave_addr_t> slaves_;
+    /// IPMBs with at least one defined PV.
+    std::set<slave_addr_t> active_ipmbs_;
+
+    using PVs_for_sensor_map_t = std::multimap<sensor_id_t, any_record_ptr>;
+    /// sensor id-to-PV mapping
+    PVs_for_sensor_map_t pv_map_;
+
+    /** Functions to call for a given record type. */
+    struct FunctionTable {
+       void (Device::*fill)(const any_record_ptr &, const any_sensor_ptr &);
+    };
+
+    static std::map<RecordType, FunctionTable> record_functions_;
+    /** Find PVs defined for an SDR and fill in their metadata. */
+    void fillPVsFromSDR(const sensor_id_t &_id, const any_sensor_ptr &_sdr);
 }; // class Device
 
 } // namespace IPMIIOC
