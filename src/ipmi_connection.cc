@@ -3,18 +3,22 @@
 #include "ipmi_internal.h"
 
 extern "C" {
-#include <ipmitool/ipmi_intf.h>
-#include <ipmitool/ipmi_sdr.h>
+#include <ipmitool/ipmi.h>
 #include <ipmitool/log.h>
 }
 
-#include <dbCommon.h>
+#include <aiRecord.h>
 #include <errlog.h>
-
+#include <link.h>
 #include <logger.h>
+#include <map>
+#include <mbbiDirectRecord.h>
+#include <mbbiRecord.h>
+#include <new>
 #include <sstream>
+#include <stdlib.h>
 #include <subsystem_registrator.h>
-
+#include <utility>
 
 namespace {
 SuS::logfile::subsystem_registrator log_id("IPMIConn");

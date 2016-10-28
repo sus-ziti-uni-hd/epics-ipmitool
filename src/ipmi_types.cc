@@ -1,9 +1,17 @@
 #include "ipmi_types.h"
-#include "string.h"
 
 #include <dbCommon.h>
+#include <epicsAssert.h>
 #include <iomanip>
 #include <sstream>
+#include <stdlib.h>
+#include <link.h>
+
+extern "C" {
+#include <ipmitool/ipmi.h>
+#include <ipmitool/ipmi_entity.h>
+#include <ipmitool/ipmi_sdr.h>
+}
 
 namespace IPMIIOC {
 

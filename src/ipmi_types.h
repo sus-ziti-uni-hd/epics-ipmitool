@@ -1,19 +1,21 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <epicsTypes.h>
 #include <map>
 #include <memory>
 #include <string>
 
-extern "C" {
-#include <ipmitool/ipmi_sdr.h>
-}
 struct aiRecord;
 struct dbCommon;
 struct link;
 struct mbbiDirectRecord;
 struct mbbiRecord;
+struct sdr_record_common_sensor;
+struct sdr_record_compact_sensor;
+struct sdr_record_full_sensor;
+
 
 namespace IPMIIOC {
 

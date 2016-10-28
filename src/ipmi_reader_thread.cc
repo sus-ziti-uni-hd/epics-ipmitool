@@ -2,14 +2,15 @@
 
 #include "ipmi_device.h"
 
+#include <utility>
 
 namespace IPMIIOC {
 
 ReaderThread::ReaderThread(Device* _d) : thread_id_(0), do_terminate_(false),
   device_(_d) {
-  ::pthread_mutex_init(&results_mutex_, NULL);
-  ::pthread_mutex_init(&mutex_, NULL);
-  ::pthread_cond_init(&cond_, NULL);
+  ::pthread_mutex_init(&results_mutex_, nullptr);
+  ::pthread_mutex_init(&mutex_, nullptr);
+  ::pthread_cond_init(&cond_, nullptr);
 } // ReaderThread constructor
 
 
@@ -53,7 +54,7 @@ result_t ReaderThread::findResult(const unsigned _pvid) {
 
 
 void ReaderThread::start() {
-  int r = ::pthread_create(&thread_id_, NULL, run, this);
+  int r = ::pthread_create(&thread_id_, nullptr, run, this);
 } // ReaderThread::start
 
 
@@ -64,7 +65,7 @@ void* ReaderThread::run(void* _instance) {
 
 
 bool ReaderThread::join() {
-  return ::pthread_join(thread_id_, NULL) == 0;
+  return ::pthread_join(thread_id_, nullptr) == 0;
 } // ReaderThread::join
 
 
@@ -95,7 +96,7 @@ void* ReaderThread::do_run() {
 
     // wait until there is work to do or termination is requested
     ::pthread_mutex_lock(&mutex_);
-    if (do_terminate_) ::pthread_exit(NULL);
+    if (do_terminate_) ::pthread_exit(nullptr);
     if (!queries_.size()) {
       // queries_.size > 0: events have been put in the queue in the
       // meantime. their cond_signal events have been missed!

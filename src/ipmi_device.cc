@@ -3,31 +3,44 @@
 #include "ipmi_reader_thread.h"
 #include "ipmi_internal.h"
 
+#include <alarm.h>
+#include <algorithm>
+#include <array>
+#include <aiRecord.h>
 #include <atomic>
+#include <callback.h>
+#include <cstdlib>
+#include <dbCommon.h>
+#include <dbDefs.h>
+#include <dbLock.h>
+#include <epicsAssert.h>
+#include <epicsMutex.h>
+#include <epicsTypes.h>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <string.h>
-#include <algorithm>
-
-#include <alarm.h>
-#include <aiRecord.h>
-#include <dbAccess.h>
-#include <errlog.h>
+#include <link.h>
+#include <logger.h>
 #include <mbbiDirectRecord.h>
 #include <mbbiRecord.h>
+#include <memory>
 #include <recSup.h>
-
-#include <logger.h>
 #include <sstream>
+#include <string.h>
 #include <subsystem_registrator.h>
-#include <fstream>
+#include <utility>
+
+extern "C" {
+#include <ipmitool/ipmi.h>
+#include <ipmitool/ipmi_intf.h>
+#include <ipmitool/ipmi_picmg.h>
+#include <ipmitool/ipmi_sdr.h>
 
 // UGLY...
 #define class impi_class
 #include <ipmitool/ipmi_sel.h>
 #undef class
 
-extern "C" {
 // for ipmitool
   int verbose = 0;
   int csv_output = 0;

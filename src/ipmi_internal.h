@@ -4,9 +4,6 @@
 #include <callback.h>
 #include <map>
 
-// forward declaration of the EPICS type.
-struct ipmi_intf;
-
 namespace IPMIIOC {
 
 class Device;

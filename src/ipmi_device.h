@@ -2,24 +2,24 @@
 #define IPMI_DEVICE_H_
 
 extern "C" {
-#include <ipmitool/ipmi_intf.h>
-#include <ipmitool/ipmi_picmg.h>
-#include <ipmitool/ipmi_sdr.h>
+struct ipmi_intf;
+struct sdr_record_compact_sensor;
+struct sdr_record_full_sensor;
+struct sensor_reading;
 } // extern "C"
 
 #include <callback.h>
 #include <epicsMutex.h>
-#include <epicsTypes.h>
 
+#include <cstdint>
 #include <map>
-#include <memory>
 #include <string>
 #include <set>
 
 #include "ipmi_types.h"
 
-struct dbCommon;
 struct aiRecord;
+struct dbCommon;
 struct link;
 struct mbbiDirectRecord;
 struct mbbiRecord;
@@ -27,7 +27,6 @@ struct mbbiRecord;
 namespace IPMIIOC {
 
 class ReaderThread;
-struct result_t;
 
 class Device {
   public:
