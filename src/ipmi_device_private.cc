@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #include "ipmi_device_private.h"
 
 #include <dbCommon.h>

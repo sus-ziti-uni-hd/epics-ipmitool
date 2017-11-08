@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #ifndef IPMI_INTERNAL_H_
 #define IPMI_INTERNAL_H_
 

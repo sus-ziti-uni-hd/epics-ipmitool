@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #ifndef WATCHDOGTHREAD_H
 #define	WATCHDOGTHREAD_H
 

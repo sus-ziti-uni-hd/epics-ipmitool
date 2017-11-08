@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #include "ipmi_reader_thread.h"
 
 #include "ipmi_device.h"

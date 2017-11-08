@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #ifndef IPMI_READER_THREAD_
 #define IPMI_READER_THREAD_
 

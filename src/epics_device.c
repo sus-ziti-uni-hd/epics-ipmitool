@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #include <aiRecord.h>
 #include <devSup.h>
 #include <epicsExport.h>

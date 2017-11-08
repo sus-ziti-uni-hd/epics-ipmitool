@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #include "WatchdogThread.h"
 
 #include "ipmi_device.h"

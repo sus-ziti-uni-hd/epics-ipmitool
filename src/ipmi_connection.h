@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #ifndef IPMI_CONNECTION_H_
 #define IPMI_CONNECTION_H_
 
