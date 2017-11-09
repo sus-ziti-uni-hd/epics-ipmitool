@@ -20,7 +20,9 @@ Usage
 First, a connection to the IPMI device has to be established. The
 `ipmiConnect` command is used to establish a connection and assign a link id to
 it.
+
     ipmiConnect(id, host, user, password, protocol, privLevel)
+
 - The _id_ is used to reference this connection from the following commands and
   EPICS records.
 - The _protocol_ can be any protocol supported by the IPMItool library. Most
@@ -29,12 +31,16 @@ it.
   priviledge level from callback (1) to OEM (5).
 
 After the connection has been establised, the device can be scanned for all
-avaiable sensors.
+available sensors.
+
     ipmiScanDevice(id)
+
 - The only parameter is the connection id for the device to be scanned.
 
 The scan result can be dumped to an EPICS database with
+
     ipmiDumpDatabase(id, file)
+
 - _id_ refers to the connection to a previously scanned device.
 - _file_ is the name of the output file. The output format is an EPICS database.
   Note that manual preprocessing of the database is required. As a minimum, SCAN
