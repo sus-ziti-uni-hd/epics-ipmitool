@@ -11,6 +11,7 @@
 extern "C" {
 #include <ipmitool/ipmi.h>
 #include <ipmitool/ipmi_entity.h>
+#include <ipmitool/ipmi_fru.h>
 #include <ipmitool/ipmi_sdr.h>
 }
 
@@ -33,13 +34,13 @@ sensor_id_t::sensor_id_t(const ::link& _loc)
 sensor_id_t::sensor_id_t(slave_addr_t _ipmb, const ::sdr_record_full_sensor* _sdr)
    : ipmb{_ipmb}, entity{_sdr->cmn.entity.id}, instance(_sdr->cmn.entity.instance)
 {
-   name = reinterpret_cast<const char *>(_sdr->id_string);
+   name = decodeIdString(&_sdr->cmn, SDR_RECORD_TYPE_FULL_SENSOR);
 }
 
 sensor_id_t::sensor_id_t(slave_addr_t _ipmb, const ::sdr_record_compact_sensor* _sdr)
    : ipmb{_ipmb}, entity{_sdr->cmn.entity.id}, instance(_sdr->cmn.entity.instance)
 {
-   name = reinterpret_cast<const char *>(_sdr->id_string);
+   name = decodeIdString(&_sdr->cmn, SDR_RECORD_TYPE_COMPACT_SENSOR);
 }
 
 
@@ -158,6 +159,24 @@ std::string any_record_ptr::pvName() const {
    } else {
       return data_ptr.common->name;
    }
+}
+
+
+std::string decodeIdString(const ::sdr_record_common_sensor* _sdr, uint8_t _type) {
+   unsigned i = 0;
+   const uint8_t *data;
+   switch (_type) {
+      case SDR_RECORD_TYPE_FULL_SENSOR:
+         data = &reinterpret_cast<const ::sdr_record_full_sensor*>(_sdr)->id_code;
+         break;
+      case SDR_RECORD_TYPE_COMPACT_SENSOR:
+         data = &reinterpret_cast<const ::sdr_record_compact_sensor*>(_sdr)->id_code;
+         break;
+      default:
+         return "";
+   }
+   std::unique_ptr<char, decltype(::free)*> name{::get_fru_area_str(const_cast<uint8_t*>(data), &i), ::free};
+   return std::string{name.get()};
 }
 
 }

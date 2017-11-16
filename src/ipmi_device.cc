@@ -343,23 +343,15 @@ void Device::detectSensors() {
     std::stringstream ss;
     ss << "sensor 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.first.ipmb
        << "/0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second.sensor_id;
-    char name[17];// id_string does not need to be zero terminated... check length!
-    int idlen;// actually, we should convert it to ASCII first, if its bcdplus or 6 bit -- TODO
-    memset(name, 0, sizeof(name));
+    std::string name {decodeIdString(i.second.sdr_record, i.second.sdr_record.type)};
 
     switch (i.second.sdr_record.type) {
       case SDR_RECORD_TYPE_FULL_SENSOR:
-        idlen = static_cast<::sdr_record_full_sensor*>(i.second.sdr_record)->id_code & 0x1f;
-        idlen = idlen < sizeof(name) ? idlen : sizeof(name) - 1;
-        memcpy(name, static_cast<::sdr_record_full_sensor*>(i.second.sdr_record)->id_string, idlen);
         ss << " : full '" << name
                 << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second.sdr_record()->event_type
                 << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second.sdr_record()->sensor.type;
         break;
       case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        idlen = static_cast<::sdr_record_compact_sensor*>(i.second.sdr_record)->id_code & 0x1f;
-        idlen = idlen < sizeof(name) ? idlen : sizeof(name) - 1;
-        memcpy(name, static_cast<::sdr_record_compact_sensor*>(i.second.sdr_record)->id_string, idlen);
         ss << " : compact '" << name
                 << "', event type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second.sdr_record()->event_type
                 << ", type 0x" << std::hex << std::setw(2) << std::setfill('0') << +i.second.sdr_record()->sensor.type;
@@ -406,15 +398,8 @@ void Device::dumpDatabase(const std::string& _file) {
        // only defined by a PV
        continue;
     }
-    std::string name;
-    switch (sensor.second.sdr_record.type) {
-      case SDR_RECORD_TYPE_FULL_SENSOR:
-        name = reinterpret_cast<const char*>(static_cast<::sdr_record_full_sensor*>(sensor.second.sdr_record)->id_string);
-        break;
-      case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        name = reinterpret_cast<const char*>(static_cast<::sdr_record_compact_sensor*>(sensor.second.sdr_record)->id_string);
-        break;
-      default:
+    std::string name {decodeIdString(sensor.second.sdr_record, sensor.second.sdr_record.type)};
+    if (name.empty()) {
         std::stringstream ss;
         ss << "unexpected type 0x" << std::hex << +sensor.second.sdr_record.type;
         name = ss.str();
@@ -540,16 +525,11 @@ void Device::initInputRecord(::dbCommon* _rec, const ::link& _inp) {
 
 void Device::initRecordDesc(const any_record_ptr& _rec, const any_sensor_ptr& _sdr) {
   if (::strlen(_rec()->desc) == 0) {
-    switch (_sdr.type) {
-      case SDR_RECORD_TYPE_FULL_SENSOR:
-        strncpy(_rec()->desc, reinterpret_cast<const char*>(static_cast<::sdr_record_full_sensor*>(_sdr)->id_string), 40);
-        break;
-      case SDR_RECORD_TYPE_COMPACT_SENSOR:
-        strncpy(_rec()->desc, reinterpret_cast<const char*>(static_cast<::sdr_record_compact_sensor*>(_sdr)->id_string), 40);
-        break;
-      default:
+    std::string name {decodeIdString(_sdr(), _sdr.type)};
+    if (name.empty()) {
         std::cerr << "Unexpected type 0x" << std::hex << +_sdr()->sensor.type << std::endl;
     }
+    strncpy(_rec()->desc, name.c_str(), 40);
     _rec()->desc[40] = '\0';
   } // if
 }

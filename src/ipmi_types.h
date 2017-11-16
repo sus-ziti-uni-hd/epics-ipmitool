@@ -126,4 +126,7 @@ private:
 };
 
 
+// helper function to decode id strings that may be in various encodings.
+std::string decodeIdString(const ::sdr_record_common_sensor* _sdr, uint8_t _type);
+
 } // namespace IPMIIOC
