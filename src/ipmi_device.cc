@@ -25,6 +25,7 @@
 #include <mbbiDirectRecord.h>
 #include <mbbiRecord.h>
 #include <memory>
+#include <recGbl.h>
 #include <recSup.h>
 #include <sstream>
 #include <string.h>
@@ -52,6 +53,13 @@ namespace {
 SuS::logfile::subsystem_registrator log_id("IPMIDev");
 
 std::atomic<unsigned> nextid(0U);
+
+template<class S> long process(S* rec) {
+  typedef long(*real_signature)(dbCommon*);
+  (*reinterpret_cast<real_signature>(rec->rset->process))(reinterpret_cast<dbCommon*>(rec));
+  return false;
+}
+
 } // namespace
 
 
@@ -83,9 +91,8 @@ void Device::aiCallback(::CALLBACK* _cb) {
   if (result.valid == false) {
     dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
     // update the record
-    priv->rec->udf = 1;
-    typedef long(*real_signature)(dbCommon*);
-    (*reinterpret_cast<real_signature>(priv->rec->rset->process))(priv->rec);
+    recGblSetSevr(priv->rec, READ_ALARM, INVALID_ALARM);
+    process(priv->rec);
     dbScanUnlock(reinterpret_cast<dbCommon*>(priv->rec));
 
     if (*priv->good) {
@@ -138,9 +145,8 @@ void Device::mbbiDirectCallback(::CALLBACK* _cb) {
   if (result.valid == false) {
     dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
     // update the record
-    priv->rec->udf = 1;
-    typedef long(*real_signature)(dbCommon*);
-    (*reinterpret_cast<real_signature>(priv->rec->rset->process))(priv->rec);
+    recGblSetSevr(priv->rec, READ_ALARM, INVALID_ALARM);
+    process(priv->rec);
     dbScanUnlock(reinterpret_cast<dbCommon*>(priv->rec));
 
     if (*priv->good) {
@@ -194,9 +200,8 @@ void Device::mbbiCallback(::CALLBACK* _cb) {
   if (result.valid == false) {
     dbScanLock(reinterpret_cast<dbCommon*>(priv->rec));
     // update the record
-    priv->rec->udf = 1;
-    typedef long(*real_signature)(dbCommon*);
-    (*reinterpret_cast<real_signature>(priv->rec->rset->process))(priv->rec);
+    recGblSetSevr(priv->rec, READ_ALARM, INVALID_ALARM);
+    process(priv->rec);
     dbScanUnlock(reinterpret_cast<dbCommon*>(priv->rec));
 
     if (*priv->good) {
@@ -737,7 +742,8 @@ bool Device::ping() {
 bool Device::readAiSensor(::aiRecord* _pai) {
   if (!_pai->dpvt) {
     // when dpvt is not set, init failed
-    _pai->udf = 1;
+    recGblSetSevr(_pai, LINK_ALARM, INVALID_ALARM);
+    process(_pai);
     return false;
   } // if
   if (!_pai->pact) {
@@ -757,7 +763,8 @@ bool Device::readAiSensor(::aiRecord* _pai) {
 bool Device::readMbbiDirectSensor(::mbbiDirectRecord* _pmbbi) {
   if (!_pmbbi->dpvt) {
     // when dpvt is not set, init failed
-    _pmbbi->udf = 1;
+    recGblSetSevr(_pmbbi, LINK_ALARM, INVALID_ALARM);
+    process(_pmbbi);
     return false;
   } // if
   if (!_pmbbi->pact) {
@@ -777,7 +784,8 @@ bool Device::readMbbiDirectSensor(::mbbiDirectRecord* _pmbbi) {
 bool Device::readMbbiSensor(::mbbiRecord* _pmbbi) {
   if (!_pmbbi->dpvt) {
     // when dpvt is not set, init failed
-    _pmbbi->udf = 1;
+    recGblSetSevr(_pmbbi, LINK_ALARM, INVALID_ALARM);
+    process(_pmbbi);
     return false;
   } // if
   if (!_pmbbi->pact) {
