@@ -2,10 +2,6 @@
 #ifndef IPMI_CONNECTION_H_
 #define IPMI_CONNECTION_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <aiRecord.h>
 #include <mbbiDirectRecord.h>
 #include <mbbiRecord.h>
@@ -31,10 +27,6 @@ void ipmiDumpDatabase(int _id, const char* _file);
 
 /** Start first scan over active IPMBs. */
 void ipmiInitialScan();
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
 
