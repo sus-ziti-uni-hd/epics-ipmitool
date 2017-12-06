@@ -56,8 +56,7 @@ std::atomic<unsigned> nextid(0U);
 
 template<class S> long process(S* rec) {
   typedef long(*real_signature)(dbCommon*);
-  (*reinterpret_cast<real_signature>(rec->rset->process))(reinterpret_cast<dbCommon*>(rec));
-  return false;
+  return (*reinterpret_cast<real_signature>(rec->rset->process))(reinterpret_cast<dbCommon*>(rec));
 }
 
 } // namespace
