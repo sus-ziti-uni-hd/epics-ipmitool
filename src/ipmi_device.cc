@@ -306,6 +306,12 @@ bool Device::connect(const std::string& _hostname, const std::string& _username,
   ::ipmi_intf_session_set_username(intf_, const_cast<char*>(_username.c_str()));
   ::ipmi_intf_session_set_password(intf_, const_cast<char*>(_password.c_str()));
   if (_privlevel > 0) ::ipmi_intf_session_set_privlvl(intf_, (uint8_t)_privlevel);
+  // ipmitool: "See table 22-19 of the IPMIv2 spec"
+  ::ipmi_intf_session_set_cipher_suite_id(intf_, 3);
+  std::array<uint8_t, IPMI_KG_BUFFER_SIZE> kgkey;
+  kgkey.fill(0);
+  ::ipmi_intf_session_set_kgkey(intf_, kgkey.data());
+  ::ipmi_intf_session_set_lookupbit(intf_, 0x10);
 
   if ((intf_->open == NULL) || (intf_->open(intf_) == -1)) {
     SuS_LOG_STREAM(severe, log_id(), "Connection to '" << _hostname << "' failed.");
